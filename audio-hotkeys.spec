@@ -6,7 +6,7 @@ hiddenimports += collect_submodules("comtypes")
 hiddenimports += collect_submodules("pycaw")
 
 a = Analysis(
-    ["audio_hotkeys\\__main__.py"],
+    ["launcher.py"],
     pathex=["."],
     binaries=[],
     datas=[],
