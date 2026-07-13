@@ -12,7 +12,7 @@ from pystray._win32 import Icon as WinIcon
 from . import audio, config
 from .hotkeys import HotkeyService
 from .settings import open_settings
-from .tray import DarkTrayMenu, make_icon, toast
+from .tray import DarkTrayMenu, make_icon, show_profile_osd, toast
 
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
@@ -84,8 +84,12 @@ class App:
             toast(self.root, f"Slot {slot} missing")
             return
         try:
-            summary = audio.apply_snapshot(snap)
-            toast(self.root, summary)
+            audio.apply_snapshot(snap)
+            show_profile_osd(
+                self.root,
+                slot,
+                str(snap.get("name") or f"Profile {slot}"),
+            )
         except Exception as exc:  # noqa: BLE001
             toast(self.root, f"Apply failed: {exc}")
 

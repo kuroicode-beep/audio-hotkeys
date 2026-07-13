@@ -139,6 +139,16 @@ class DarkTrayMenu:
         tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=8, pady=4)
 
 
+_osd_win: tk.Toplevel | None = None
+_osd_job: str | None = None
+
+NUMBER_FONT = ("Segoe UI", 220, "bold")
+NAME_FONT = ("Segoe UI", 28)
+OSD_BG = "#0A0A0A"
+OSD_FG = "#FFFFFF"
+OSD_MUTED = "#C8C8C8"
+
+
 def toast(root: tk.Tk, message: str, ms: int = 2200) -> None:
     win = tk.Toplevel(root)
     win.overrideredirect(True)
@@ -163,6 +173,137 @@ def toast(root: tk.Tk, message: str, ms: int = 2200) -> None:
     y = win.winfo_screenheight() - win.winfo_reqheight() - 72
     win.geometry(f"+{x}+{y}")
     win.after(ms, win.destroy)
+
+
+def show_profile_osd(
+    root: tk.Tk,
+    slot: str,
+    name: str = "",
+    *,
+    hold_ms: int = 900,
+    fade_ms: int = 280,
+    steps: int = 12,
+) -> None:
+    """Large centered profile number with fade-in / fade-out."""
+    global _osd_win, _osd_job
+    _cancel_osd(root)
+
+    win = tk.Toplevel(root)
+    win.overrideredirect(True)
+    win.attributes("-topmost", True)
+    win.attributes("-alpha", 0.0)
+    win.configure(bg=OSD_BG)
+    try:
+        win.attributes("-transparentcolor", "")
+    except tk.TclError:
+        pass
+
+    outer = tk.Frame(win, bg=OSD_BG, padx=72, pady=48)
+    outer.pack()
+    tk.Label(
+        outer,
+        text=str(slot),
+        bg=OSD_BG,
+        fg=OSD_FG,
+        font=NUMBER_FONT,
+        justify="center",
+    ).pack()
+    subtitle = (name or f"Profile {slot}").strip()
+    tk.Label(
+        outer,
+        text=subtitle,
+        bg=OSD_BG,
+        fg=OSD_MUTED,
+        font=NAME_FONT,
+        justify="center",
+    ).pack(pady=(0, 8))
+
+    win.update_idletasks()
+    sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+    ww, wh = win.winfo_reqwidth(), win.winfo_reqheight()
+    x = max(0, (sw - ww) // 2)
+    y = max(0, (sh - wh) // 3)
+    win.geometry(f"{ww}x{wh}+{x}+{y}")
+    # Click-through friendly: don't steal focus from games/apps
+    win.attributes("-topmost", True)
+    try:
+        win.lift()
+        win.update_idletasks()
+    except tk.TclError:
+        pass
+
+    _osd_win = win
+    interval = max(12, fade_ms // steps)
+    peak = 0.92
+
+    def set_alpha(value: float) -> None:
+        if _osd_win is not win:
+            return
+        try:
+            win.attributes("-alpha", max(0.0, min(1.0, value)))
+        except tk.TclError:
+            pass
+
+    def fade(to: float, done: Callable[[], None] | None = None) -> None:
+        nonlocal_state = {"n": 0}
+
+        def tick() -> None:
+            global _osd_job
+            if _osd_win is not win:
+                return
+            nonlocal_state["n"] += 1
+            t = nonlocal_state["n"] / steps
+            # ease-ish
+            eased = t * t * (3 - 2 * t)
+            start = getattr(win, "_osd_alpha", 0.0)
+            set_alpha(start + (to - start) * eased)
+            if nonlocal_state["n"] >= steps:
+                win._osd_alpha = to  # type: ignore[attr-defined]
+                set_alpha(to)
+                _osd_job = None
+                if done:
+                    done()
+                return
+            _osd_job = root.after(interval, tick)
+
+        win._osd_alpha = float(win.attributes("-alpha"))  # type: ignore[attr-defined]
+        tick()
+
+    def after_hold() -> None:
+        fade(0.0, lambda: _destroy_osd(win))
+
+    def after_in() -> None:
+        global _osd_job
+        _osd_job = root.after(hold_ms, after_hold)
+
+    fade(peak, after_in)
+
+
+def _destroy_osd(win: tk.Toplevel) -> None:
+    global _osd_win, _osd_job
+    if _osd_win is win:
+        _osd_win = None
+    _osd_job = None
+    try:
+        win.destroy()
+    except tk.TclError:
+        pass
+
+
+def _cancel_osd(root: tk.Tk) -> None:
+    global _osd_win, _osd_job
+    if _osd_job is not None:
+        try:
+            root.after_cancel(_osd_job)
+        except Exception:
+            pass
+        _osd_job = None
+    if _osd_win is not None:
+        try:
+            _osd_win.destroy()
+        except tk.TclError:
+            pass
+        _osd_win = None
 
 
 def run_on_ui(root: tk.Tk, fn: Callable[[], None]) -> None:
