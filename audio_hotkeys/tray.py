@@ -13,7 +13,7 @@ FG = "#F2F2F2"
 HOVER = "#2A2A2A"
 FOCUS = "#FFFF00"
 BORDER = "#3A3A3A"
-FONT = ("Segoe UI", 16)
+FONT = ("Segoe UI", 12)
 
 
 def make_icon(size: int = 64) -> Image.Image:
@@ -123,8 +123,8 @@ class DarkTrayMenu:
             activeforeground=FG,
             relief="flat",
             bd=0,
-            padx=16,
-            pady=12,
+            padx=12,
+            pady=6,
             font=FONT,
             highlightthickness=2,
             highlightbackground=BG,
