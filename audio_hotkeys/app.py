@@ -85,11 +85,8 @@ class App:
             return
         try:
             audio.apply_snapshot(snap)
-            show_profile_osd(
-                self.root,
-                slot,
-                str(snap.get("name") or f"Profile {slot}"),
-            )
+            name = str(snap.get("name") or "").strip() or f"Slot {slot}"
+            show_profile_osd(self.root, slot, name)
         except Exception as exc:  # noqa: BLE001
             toast(self.root, f"Apply failed: {exc}")
 

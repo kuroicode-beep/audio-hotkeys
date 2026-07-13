@@ -68,8 +68,8 @@ class DarkTrayMenu:
         data = config.load_config()
         for key in config.SLOT_KEYS:
             snap = data["snapshots"][key]
-            label = snap.get("name") or f"Slot {key}"
-            text = f"Ctrl+Alt+Num{key}  {label}"
+            label = (snap.get("name") or "").strip() or f"Slot {key}"
+            text = f"[{key}]  {label}"
             self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)))
 
         self._sep(frame)
@@ -142,8 +142,8 @@ class DarkTrayMenu:
 _osd_win: tk.Toplevel | None = None
 _osd_job: str | None = None
 
-NUMBER_FONT = ("Segoe UI", 220, "bold")
-NAME_FONT = ("Segoe UI", 28)
+NAME_FONT = ("Segoe UI", 96, "bold")
+SLOT_FONT = ("Segoe UI", 36)
 OSD_BG = "#0A0A0A"
 OSD_FG = "#FFFFFF"
 OSD_MUTED = "#C8C8C8"
@@ -180,43 +180,41 @@ def show_profile_osd(
     slot: str,
     name: str = "",
     *,
-    hold_ms: int = 900,
+    hold_ms: int = 1100,
     fade_ms: int = 280,
     steps: int = 12,
 ) -> None:
-    """Large centered profile number with fade-in / fade-out."""
+    """Large centered snapshot name with fade-in / fade-out."""
     global _osd_win, _osd_job
     _cancel_osd(root)
+
+    title = (name or "").strip() or f"Slot {slot}"
 
     win = tk.Toplevel(root)
     win.overrideredirect(True)
     win.attributes("-topmost", True)
     win.attributes("-alpha", 0.0)
     win.configure(bg=OSD_BG)
-    try:
-        win.attributes("-transparentcolor", "")
-    except tk.TclError:
-        pass
 
-    outer = tk.Frame(win, bg=OSD_BG, padx=72, pady=48)
+    outer = tk.Frame(win, bg=OSD_BG, padx=80, pady=56)
     outer.pack()
     tk.Label(
         outer,
-        text=str(slot),
+        text=title,
         bg=OSD_BG,
         fg=OSD_FG,
-        font=NUMBER_FONT,
-        justify="center",
-    ).pack()
-    subtitle = (name or f"Profile {slot}").strip()
-    tk.Label(
-        outer,
-        text=subtitle,
-        bg=OSD_BG,
-        fg=OSD_MUTED,
         font=NAME_FONT,
         justify="center",
-    ).pack(pady=(0, 8))
+        wraplength=1200,
+    ).pack()
+    tk.Label(
+        outer,
+        text=f"NumPad {slot}",
+        bg=OSD_BG,
+        fg=OSD_MUTED,
+        font=SLOT_FONT,
+        justify="center",
+    ).pack(pady=(12, 0))
 
     win.update_idletasks()
     sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
@@ -224,7 +222,6 @@ def show_profile_osd(
     x = max(0, (sw - ww) // 2)
     y = max(0, (sh - wh) // 3)
     win.geometry(f"{ww}x{wh}+{x}+{y}")
-    # Click-through friendly: don't steal focus from games/apps
     win.attributes("-topmost", True)
     try:
         win.lift()
@@ -253,7 +250,6 @@ def show_profile_osd(
                 return
             nonlocal_state["n"] += 1
             t = nonlocal_state["n"] / steps
-            # ease-ish
             eased = t * t * (3 - 2 * t)
             start = getattr(win, "_osd_alpha", 0.0)
             set_alpha(start + (to - start) * eased)

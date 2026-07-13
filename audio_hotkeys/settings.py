@@ -120,7 +120,7 @@ class SettingsWindow:
 
         system = ttk.LabelFrame(form_host, text="System", padding=16)
         system.pack(fill="x", pady=(0, 12))
-        self._field(system, "Name", self.name_var, entry=True)
+        self._field(system, "Snapshot name", self.name_var, entry=True)
         self._combo(system, "Output device", self.output_var, [n for n, _ in self.output_choices])
         self._combo(system, "Input device", self.input_var, [n for n, _ in self.input_choices])
         self._combo(system, "Output volume", self.out_vol_var, self.vol_choices)
