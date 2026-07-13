@@ -32,6 +32,21 @@ py -3.13 -m venv .venv
 
 Or double-click `run.bat`.
 
+## Build
+
+```powershell
+.\build.ps1
+```
+
+Output: `dist\audio-hotkeys.exe`
+
+## Windows Startup
+
+```powershell
+.\install_startup.ps1          # register (prefers dist\audio-hotkeys.exe)
+.\install_startup.ps1 -Unregister
+```
+
 ## Usage
 
 | Hotkey | Action |
