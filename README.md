@@ -60,9 +60,10 @@ Output: `dist\audio-hotkeys.exe`
 In settings:
 
 1. Pick a slot
-2. Choose output/input device and volumes from lists (`(unchanged)` skips that field)
-3. **Capture current** fills from the live defaults
-4. **Save slot** / **Apply now**
+2. Choose output/input devices from lists (`(unchanged)` skips that field)
+3. Use volume sliders (check **Set** to apply; unchecked = unchanged)
+4. **Capture current** fills from the live defaults
+5. **Save slot** / **Apply now**
 
 Config file: `%LOCALAPPDATA%\audio-hotkeys\config.json`
 

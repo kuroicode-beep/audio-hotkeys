@@ -17,8 +17,92 @@ MUTED = "#B0B0B0"
 LIST_BG = "#000000"
 LIST_FG = "#FFFFFF"
 LIST_SEL_BG = "#333333"
+SLIDER_TROUGH = "#000000"
+SLIDER_ACTIVE = "#FFFFFF"
 FONT = ("KyoboHandwriting2019", 12)
 FONT_FALLBACK = ("Segoe UI", 12)
+
+
+class VolumeSlider:
+    """0–100 slider with an Unchanged toggle (None when unchecked)."""
+
+    def __init__(self, parent: ttk.LabelFrame, label: str, font: tuple[str, int]) -> None:
+        self.enabled = tk.BooleanVar(value=False)
+        self.value = tk.IntVar(value=50)
+        self._label_var = tk.StringVar(value="—")
+        self._font = font
+
+        row = ttk.Frame(parent)
+        row.pack(fill="x", pady=8)
+        ttk.Label(row, text=label, width=16).pack(side="left")
+
+        chk = tk.Checkbutton(
+            row,
+            text="Set",
+            variable=self.enabled,
+            command=self._sync,
+            bg=BG,
+            fg=FG,
+            activebackground=BG,
+            activeforeground=FG,
+            selectcolor=BTN_BG,
+            highlightthickness=2,
+            highlightbackground=BTN_BORDER,
+            highlightcolor=FOCUS,
+            font=font,
+        )
+        chk.pack(side="left", padx=(0, 8))
+
+        self.scale = tk.Scale(
+            row,
+            from_=0,
+            to=100,
+            orient="horizontal",
+            showvalue=0,
+            variable=self.value,
+            command=lambda _v: self._sync(),
+            bg=BG,
+            fg=FG,
+            troughcolor=SLIDER_TROUGH,
+            activebackground=SLIDER_ACTIVE,
+            highlightthickness=2,
+            highlightbackground=BTN_BORDER,
+            highlightcolor=FOCUS,
+            bd=0,
+            relief="flat",
+            sliderrelief="solid",
+            length=280,
+            width=14,
+        )
+        self.scale.pack(side="left", fill="x", expand=True, padx=(0, 8))
+
+        ttk.Label(row, textvariable=self._label_var, width=5).pack(side="left")
+        self._sync()
+
+    def _sync(self) -> None:
+        on = bool(self.enabled.get())
+        state = "normal" if on else "disabled"
+        try:
+            self.scale.configure(state=state)
+        except tk.TclError:
+            pass
+        if on:
+            self._label_var.set(f"{int(self.value.get())}%")
+        else:
+            self._label_var.set("—")
+
+    def get(self) -> int | None:
+        if not self.enabled.get():
+            return None
+        return max(0, min(100, int(self.value.get())))
+
+    def set(self, value: int | None) -> None:
+        if value is None:
+            self.enabled.set(False)
+        else:
+            self.enabled.set(True)
+            self.value.set(max(0, min(100, int(value))))
+        self._sync()
 
 
 class SettingsWindow:
@@ -30,17 +114,12 @@ class SettingsWindow:
         self.name_var = tk.StringVar()
         self.output_var = tk.StringVar()
         self.input_var = tk.StringVar()
-        self.out_vol_var = tk.StringVar()
-        self.in_vol_var = tk.StringVar()
         self.kakao_output_var = tk.StringVar()
         self.kakao_input_var = tk.StringVar()
-        self.kakao_out_vol_var = tk.StringVar()
-        self.kakao_in_vol_var = tk.StringVar()
         self.status_var = tk.StringVar(value="")
 
         self.output_choices = audio.device_choices("output")
         self.input_choices = audio.device_choices("input")
-        self.vol_choices = audio.volume_choices()
         self._output_map = {name: did for name, did in self.output_choices}
         self._input_map = {name: did for name, did in self.input_choices}
 
@@ -68,7 +147,6 @@ class SettingsWindow:
             pass
         font = self._font()
 
-        # Dark combobox dropdown (native Listbox under ttk.Combobox)
         self.root.option_add("*TCombobox*Listbox.background", LIST_BG)
         self.root.option_add("*TCombobox*Listbox.foreground", LIST_FG)
         self.root.option_add("*TCombobox*Listbox.selectBackground", LIST_SEL_BG)
@@ -158,8 +236,8 @@ class SettingsWindow:
         self._field(system, "Snapshot name", self.name_var, entry=True)
         self._combo(system, "Output device", self.output_var, [n for n, _ in self.output_choices])
         self._combo(system, "Input device", self.input_var, [n for n, _ in self.input_choices])
-        self._combo(system, "Output volume", self.out_vol_var, self.vol_choices)
-        self._combo(system, "Input volume", self.in_vol_var, self.vol_choices)
+        self.out_vol = VolumeSlider(system, "Output volume", font)
+        self.in_vol = VolumeSlider(system, "Input volume", font)
 
         kakao_box = ttk.LabelFrame(form_host, text="KakaoTalk (app-only)", padding=16)
         kakao_box.pack(fill="x", pady=(0, 12))
@@ -170,8 +248,8 @@ class SettingsWindow:
         ).pack(anchor="w", pady=(0, 8))
         self._combo(kakao_box, "Output device", self.kakao_output_var, [n for n, _ in self.output_choices])
         self._combo(kakao_box, "Input device", self.kakao_input_var, [n for n, _ in self.input_choices])
-        self._combo(kakao_box, "Output volume", self.kakao_out_vol_var, self.vol_choices)
-        self._combo(kakao_box, "Input volume", self.kakao_in_vol_var, self.vol_choices)
+        self.kakao_out_vol = VolumeSlider(kakao_box, "Output volume", font)
+        self.kakao_in_vol = VolumeSlider(kakao_box, "Input volume", font)
 
         actions = ttk.Frame(outer)
         actions.pack(fill="x", pady=16)
@@ -187,7 +265,7 @@ class SettingsWindow:
             self._force_focus_style(child)
 
     def _action_button(self, parent: ttk.Frame, text: str, command: Callable[[], None]) -> tk.Button:
-        btn = tk.Button(
+        return tk.Button(
             parent,
             text=text,
             command=command,
@@ -206,7 +284,6 @@ class SettingsWindow:
             pady=6,
             cursor="hand2",
         )
-        return btn
 
     def _force_focus_style(self, widget: tk.Misc) -> None:
         try:
@@ -257,41 +334,34 @@ class SettingsWindow:
             except tk.TclError:
                 pass
 
-        box.bind("<<ComboboxSelected>>", lambda _e: None)
         box.bind("<Button-1>", lambda _e: self.root.after(1, _on_open), add="+")
         box.bind("<Down>", lambda _e: self.root.after(1, _on_open), add="+")
-
-    def _vol_label(self, value) -> str:
-        return "(unchanged)" if value is None else str(int(value))
 
     def _load_slot(self, key: str) -> None:
         snap = self.data["snapshots"][key]
         self.name_var.set(snap.get("name") or "")
         self.output_var.set(audio.find_display(self.output_choices, snap.get("output_id") or ""))
         self.input_var.set(audio.find_display(self.input_choices, snap.get("input_id") or ""))
-        self.out_vol_var.set(self._vol_label(snap.get("output_volume")))
-        self.in_vol_var.set(self._vol_label(snap.get("input_volume")))
+        self.out_vol.set(snap.get("output_volume"))
+        self.in_vol.set(snap.get("input_volume"))
         self.kakao_output_var.set(audio.find_display(self.output_choices, snap.get("kakao_output_id") or ""))
         self.kakao_input_var.set(audio.find_display(self.input_choices, snap.get("kakao_input_id") or ""))
-        self.kakao_out_vol_var.set(self._vol_label(snap.get("kakao_output_volume")))
-        self.kakao_in_vol_var.set(self._vol_label(snap.get("kakao_input_volume")))
+        self.kakao_out_vol.set(snap.get("kakao_output_volume"))
+        self.kakao_in_vol.set(snap.get("kakao_input_volume"))
         running = "running" if kakao.find_kakao_pids() else "not running"
         self.status_var.set(f"Editing slot {key}  ·  Ctrl+Alt+NumPad{key}  ·  KakaoTalk {running}")
-
-    def _parse_vol(self, raw: str) -> int | None:
-        return None if raw == "(unchanged)" else int(raw)
 
     def _read_form(self) -> dict:
         return {
             "name": self.name_var.get().strip() or f"Slot {self.slot.get()}",
             "output_id": self._output_map.get(self.output_var.get(), ""),
             "input_id": self._input_map.get(self.input_var.get(), ""),
-            "output_volume": self._parse_vol(self.out_vol_var.get()),
-            "input_volume": self._parse_vol(self.in_vol_var.get()),
+            "output_volume": self.out_vol.get(),
+            "input_volume": self.in_vol.get(),
             "kakao_output_id": self._output_map.get(self.kakao_output_var.get(), ""),
             "kakao_input_id": self._input_map.get(self.kakao_input_var.get(), ""),
-            "kakao_output_volume": self._parse_vol(self.kakao_out_vol_var.get()),
-            "kakao_input_volume": self._parse_vol(self.kakao_in_vol_var.get()),
+            "kakao_output_volume": self.kakao_out_vol.get(),
+            "kakao_input_volume": self.kakao_in_vol.get(),
         }
 
     def _save_slot(self) -> None:
@@ -314,8 +384,8 @@ class SettingsWindow:
         in_vol = audio.get_volume("input")
         self.output_var.set(out.name if out else "(unchanged)")
         self.input_var.set(inp.name if inp else "(unchanged)")
-        self.out_vol_var.set(str(_nearest_five(out_vol)) if out_vol is not None else "(unchanged)")
-        self.in_vol_var.set(str(_nearest_five(in_vol)) if in_vol is not None else "(unchanged)")
+        self.out_vol.set(out_vol)
+        self.in_vol.set(in_vol)
         self.status_var.set("Captured system devices/volumes")
 
     def _capture_kakao(self) -> None:
@@ -325,14 +395,9 @@ class SettingsWindow:
         devices = kakao.get_kakao_devices()
         self.kakao_output_var.set(audio.find_display(self.output_choices, devices.get("output_id") or ""))
         self.kakao_input_var.set(audio.find_display(self.input_choices, devices.get("input_id") or ""))
-        vol = kakao.get_kakao_output_volume()
-        self.kakao_out_vol_var.set(str(_nearest_five(vol)) if vol is not None else "(unchanged)")
-        self.kakao_in_vol_var.set("(unchanged)")
+        self.kakao_out_vol.set(kakao.get_kakao_output_volume())
+        self.kakao_in_vol.set(None)
         self.status_var.set("Captured KakaoTalk devices/volume")
-
-
-def _nearest_five(value: int) -> int:
-    return int(round(value / 5) * 5)
 
 
 def open_settings(on_saved: Callable[[], None] | None = None) -> None:
