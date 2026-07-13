@@ -78,6 +78,13 @@ def get_default_device(flow: str) -> AudioDevice | None:
         return None
     if raw is None:
         return None
+    # Some pycaw versions return a wrapped AudioDevice for speakers but a raw
+    # IMMDevice pointer for microphone — normalize both.
+    if not hasattr(raw, "id") or not hasattr(raw, "FriendlyName"):
+        try:
+            raw = AudioUtilities.CreateDevice(raw)
+        except Exception:
+            return None
     return AudioDevice(id=raw.id, name=raw.FriendlyName, flow=flow)
 
 
@@ -109,6 +116,8 @@ def set_volume(flow: str, percent: int | None) -> None:
 
 
 def apply_snapshot(snapshot: dict) -> str:
+    from . import kakao
+
     parts: list[str] = []
 
     output_id = snapshot.get("output_id") or ""
@@ -131,6 +140,8 @@ def apply_snapshot(snapshot: dict) -> str:
     if in_vol is not None:
         set_volume("input", int(in_vol))
         parts.append(f"InVol: {int(in_vol)}%")
+
+    parts.extend(kakao.apply_kakao_snapshot(snapshot))
 
     label = snapshot.get("name") or "Snapshot"
     if not parts:

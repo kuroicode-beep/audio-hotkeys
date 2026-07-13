@@ -62,12 +62,16 @@
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `name` | string | 표시 이름 |
-| `output_id` | string | 출력 장치 ID. 빈 값 = 변경 안 함 |
-| `input_id` | string | 입력 장치 ID. 빈 값 = 변경 안 함 |
-| `output_volume` | int \| null | 0–100. `null` = 변경 안 함 |
-| `input_volume` | int \| null | 0–100. `null` = 변경 안 함 |
+| `output_id` | string | 시스템 출력 장치 ID. 빈 값 = 변경 안 함 |
+| `input_id` | string | 시스템 입력 장치 ID. 빈 값 = 변경 안 함 |
+| `output_volume` | int \| null | 시스템 출력 볼륨 0–100. `null` = 변경 안 함 |
+| `input_volume` | int \| null | 시스템 입력 볼륨 0–100. `null` = 변경 안 함 |
+| `kakao_output_id` | string | 카카오톡 전용 출력 장치. 빈 값 = 변경 안 함 |
+| `kakao_input_id` | string | 카카오톡 전용 입력 장치. 빈 값 = 변경 안 함 |
+| `kakao_output_volume` | int \| null | 카카오톡 앱 볼륨(우선). `null` = 변경 안 함 |
+| `kakao_input_volume` | int \| null | 예비 앱 볼륨 필드(출력 볼륨이 없을 때 사용) |
 
-슬롯 0의 기본 표시 이름은 `Default`, 1–9는 `Slot N`이다. 사용자가 이름을 바꿀 수 있다.
+카카오톡 필드는 `KakaoTalk.exe`가 실행 중일 때만 적용된다. 장치 라우팅은 번들된 `svcl.exe`(Nir Soft)를 사용한다.
 
 ### 5.2 단축키 (고정)
 

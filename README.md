@@ -4,10 +4,12 @@ Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots.
 
 Each slot can store:
 
-- output device
-- input device
-- output volume
-- input volume
+- system output / input device
+- system output / input volume
+- **KakaoTalk-only** output / input device
+- **KakaoTalk-only** output / input volume (Windows app mixer has one volume; output volume is preferred)
+
+KakaoTalk per-app routing uses bundled [SoundVolumeCommandLine (svcl)](https://www.nirsoft.net/utils/sound_volume_command_line.html). KakaoTalk must be running when the snapshot is applied.
 
 Hotkeys are fixed. Configure devices/volumes in the dark settings window.
 

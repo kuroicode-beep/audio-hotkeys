@@ -1,0 +1,11 @@
+Nir Soft SoundVolumeCommandLine (svcl.exe)
+==========================================
+
+This project bundles `tools/svcl/svcl.exe` to set per-application
+audio devices/volumes for KakaoTalk on Windows 11 builds where the
+undocumented AudioPolicyConfig API is unreliable.
+
+svcl.exe is freeware by Nir Sofer:
+https://www.nirsoft.net/utils/sound_volume_command_line.html
+
+Redistribution follows Nir Soft's freeware terms. Do not remove this notice.

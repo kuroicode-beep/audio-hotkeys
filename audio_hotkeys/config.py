@@ -17,6 +17,10 @@ EMPTY_SNAPSHOT: dict[str, Any] = {
     "input_id": "",
     "output_volume": None,
     "input_volume": None,
+    "kakao_output_id": "",
+    "kakao_input_id": "",
+    "kakao_output_volume": None,
+    "kakao_input_volume": None,
 }
 
 
@@ -64,10 +68,10 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
             continue
         snap = deepcopy(EMPTY_SNAPSHOT)
         snap["name"] = str(raw.get("name") or base["snapshots"][key]["name"])
-        snap["output_id"] = str(raw.get("output_id") or "")
-        snap["input_id"] = str(raw.get("input_id") or "")
-        snap["output_volume"] = _volume(raw.get("output_volume"))
-        snap["input_volume"] = _volume(raw.get("input_volume"))
+        for field in ("output_id", "input_id", "kakao_output_id", "kakao_input_id"):
+            snap[field] = str(raw.get(field) or "")
+        for field in ("output_volume", "input_volume", "kakao_output_volume", "kakao_input_volume"):
+            snap[field] = _volume(raw.get(field))
         base["snapshots"][key] = snap
     return base
 

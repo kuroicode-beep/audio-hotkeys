@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = ["comtypes.stream"]
+hiddenimports = ["comtypes.stream", "psutil"]
 hiddenimports += collect_submodules("comtypes")
 hiddenimports += collect_submodules("pycaw")
 
@@ -9,7 +9,7 @@ a = Analysis(
     ["launcher.py"],
     pathex=["."],
     binaries=[],
-    datas=[],
+    datas=[("tools/svcl/svcl.exe", "tools/svcl")],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
