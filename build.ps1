@@ -10,18 +10,7 @@ if (-not (Test-Path $py)) {
 }
 
 & $py -m pip install -q pyinstaller
-& $py -m PyInstaller `
-    --noconfirm `
-    --clean `
-    --windowed `
-    --onefile `
-    --name audio-hotkeys `
-    --icon NONE `
-    --hidden-import comtypes.stream `
-    --collect-submodules comtypes `
-    --collect-submodules pycaw `
-    --paths $PSScriptRoot `
-    "$PSScriptRoot\audio_hotkeys\__main__.py"
+& $py -m PyInstaller --noconfirm --clean "$PSScriptRoot\audio-hotkeys.spec"
 
 $exe = Join-Path $PSScriptRoot "dist\audio-hotkeys.exe"
 if (-not (Test-Path $exe)) {
