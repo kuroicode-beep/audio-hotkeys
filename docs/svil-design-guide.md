@@ -1,4 +1,9 @@
-﻿**SVIL 표준 디자인 스크립트** — 모든 SVIL 계열 프론트엔드(웹·데스크톱·모바일)의 공통 디자인·접근성 표준.
+﻿> ⚠ **이 문서는 2026-07-14 시점의 사본이며 정본이 아니다.**
+> 정본은 `/svil-frontend-design` 스킬(`~/.claude/skills/svil-frontend-design/SKILL.md`).
+> 알려진 차이: 아래 **"최소 폰트 16px"는 구판**이다. 현행 기준은 **본문 18px · 전체 최소선 12px**
+> (2026-07-14 개정으로 16px 최소선 폐기). 충돌하면 스킬을 따를 것.
+
+**SVIL 표준 디자인 스크립트** — 모든 SVIL 계열 프론트엔드(웹·데스크톱·모바일)의 공통 디자인·접근성 표준.
 
 버전 1.1 · 2026-07-14 · 작성 Claude Code 출처: SVIL 표준 디자인 스크립트(`/design`) · TXTDiary `App.css` · TXTAIMemory v0.9.1 실적용 · inblue_money v1.9.1 실적용 · TXT 패밀리 디자인 가이드 v1.2(`C:\Downloads`)
 
