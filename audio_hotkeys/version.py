@@ -2,10 +2,15 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.3.1",
+        "2026-07-16",
+        "프로필 오버레이(OSD) 표시 시간을 2초 늘렸습니다 (약 1.1초 → 3.1초).",
+    ),
     (
         "1.3.0",
         "2026-07-16",

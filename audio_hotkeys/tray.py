@@ -202,7 +202,7 @@ def show_profile_osd(
     *,
     level: str = "normal",
     tag: str | None = None,
-    hold_ms: int = 1100,
+    hold_ms: int = 3100,
     fade_ms: int = 280,
     steps: int = 12,
 ) -> None:
