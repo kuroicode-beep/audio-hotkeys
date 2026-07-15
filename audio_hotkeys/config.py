@@ -41,7 +41,14 @@ def default_config() -> dict[str, Any]:
         snap = deepcopy(EMPTY_SNAPSHOT)
         snap["name"] = "Default" if key == "0" else f"Slot {key}"
         snapshots[key] = snap
-    return {"snapshots": snapshots}
+    return {
+        "snapshots": snapshots,
+        "ui": {
+            "font_id": "kyobo-handwriting-2019",
+            "font_size": "M",
+            "lang": "ko",
+        },
+    }
 
 
 def ensure_config() -> dict[str, Any]:
@@ -70,20 +77,28 @@ def save_config(data: dict[str, Any]) -> None:
 
 def _normalize(data: dict[str, Any]) -> dict[str, Any]:
     base = default_config()
-    incoming = data.get("snapshots") if isinstance(data, dict) else None
-    if not isinstance(incoming, dict):
+    if not isinstance(data, dict):
         return base
-    for key in SLOT_KEYS:
-        raw = incoming.get(key, {})
-        if not isinstance(raw, dict):
-            continue
-        snap = deepcopy(EMPTY_SNAPSHOT)
-        snap["name"] = str(raw.get("name") or base["snapshots"][key]["name"])
-        for field in ID_FIELDS + NAME_FIELDS:
-            snap[field] = str(raw.get(field) or "")
-        for field in VOLUME_FIELDS:
-            snap[field] = _volume(raw.get(field))
-        base["snapshots"][key] = snap
+    incoming = data.get("snapshots")
+    if isinstance(incoming, dict):
+        for key in SLOT_KEYS:
+            raw = incoming.get(key, {})
+            if not isinstance(raw, dict):
+                continue
+            snap = deepcopy(EMPTY_SNAPSHOT)
+            snap["name"] = str(raw.get("name") or base["snapshots"][key]["name"])
+            for field in ID_FIELDS + NAME_FIELDS:
+                snap[field] = str(raw.get(field) or "")
+            for field in VOLUME_FIELDS:
+                snap[field] = _volume(raw.get(field))
+            base["snapshots"][key] = snap
+    ui = data.get("ui")
+    if isinstance(ui, dict):
+        merged = dict(base["ui"])
+        for key in ("font_id", "font_size", "lang"):
+            if ui.get(key):
+                merged[key] = str(ui[key])
+        base["ui"] = merged
     return base
 
 

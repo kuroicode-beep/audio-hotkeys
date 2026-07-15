@@ -1,4 +1,3 @@
-# audio_hotkeys/tray.py
 from __future__ import annotations
 
 import tkinter as tk
@@ -6,13 +5,9 @@ from typing import Callable
 
 from PIL import Image, ImageDraw
 
-from . import config, theme
-from .version import APP_VERSION
-
-
-def _rgb(token: str) -> tuple[int, int, int]:
-    """'#rrggbb' 토큰을 Pillow RGB 튜플로."""
-    return tuple(int(token[i : i + 2], 16) for i in (1, 3, 5))  # type: ignore[return-value]
+from . import config, prefs, theme
+from .i18n import t
+from .win_shell import prefers_reduced_motion
 
 
 def make_icon(size: int = 64) -> Image.Image:
@@ -20,11 +15,10 @@ def make_icon(size: int = 64) -> Image.Image:
     draw = ImageDraw.Draw(img)
     draw.ellipse(
         (4, 4, size - 5, size - 5),
-        fill=(*_rgb(theme.SURFACE), 255),
-        outline=(*_rgb(theme.ACCENT_STRONG), 255),
+        fill=(13, 13, 18, 255),
+        outline=(245, 245, 247, 255),
         width=3,
     )
-    # simple speaker wedge
     draw.polygon(
         [
             (size * 0.28, size * 0.38),
@@ -34,7 +28,7 @@ def make_icon(size: int = 64) -> Image.Image:
             (size * 0.45, size * 0.62),
             (size * 0.28, size * 0.62),
         ],
-        fill=(*_rgb(theme.ACCENT_STRONG), 255),
+        fill=(179, 221, 255, 255),
     )
     return img
 
@@ -57,43 +51,31 @@ class DarkTrayMenu:
 
     def show(self, x: int, y: int) -> None:
         self.close()
+        p = prefs.load_prefs()
+        font = prefs.ui_font(self.root, p)
+        lang = p["lang"]
+
         popup = tk.Toplevel(self.root)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(bg=theme.BORDER)
+        popup.configure(bg=theme.BORDER_STRONG)
         self._popup = popup
 
-        frame = tk.Frame(popup, bg=theme.SURFACE, highlightthickness=0)
+        frame = tk.Frame(popup, bg=theme.BG, highlightthickness=0)
         frame.pack(padx=1, pady=1)
 
-        header = tk.Frame(frame, bg=theme.SURFACE)
-        header.pack(fill="x", padx=theme.px(14), pady=(theme.px(10), theme.px(6)))
-        tk.Label(
-            header,
-            text="audio-hotkeys",
-            bg=theme.SURFACE,
-            fg=theme.TEXT_SUB,
-            font=theme.ui_font(theme.SIZE_MICRO),
-        ).pack(side="left")
-        tk.Label(
-            header,
-            text=f"v{APP_VERSION}",
-            bg=theme.SURFACE,
-            fg=theme.TEXT_SUB,
-            font=theme.mono_font(theme.SIZE_MICRO),
-        ).pack(side="right")
-
-        self._item(frame, "설정 열기…", self._wrap(self.on_settings))
+        self._item(frame, t("settings", lang), self._wrap(self.on_settings), font)
         self._sep(frame)
 
         data = config.load_config()
         for key in config.SLOT_KEYS:
             snap = data["snapshots"][key]
             label = (snap.get("name") or "").strip() or f"Slot {key}"
-            self._item(frame, label, self._wrap(lambda k=key: self.on_apply(k)), slot=key)
+            text = f"[{key}]  {label}"
+            self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)), font)
 
         self._sep(frame)
-        self._item(frame, "종료", self._wrap(self.on_quit))
+        self._item(frame, t("quit", lang), self._wrap(self.on_quit), font)
 
         popup.update_idletasks()
         w = popup.winfo_reqwidth()
@@ -131,58 +113,32 @@ class DarkTrayMenu:
 
         return runner
 
-    def _item(
-        self,
-        parent: tk.Frame,
-        text: str,
-        command: Callable[[], None],
-        slot: str | None = None,
-    ) -> None:
-        row = tk.Frame(parent, bg=theme.SURFACE, cursor="hand2")
-        row.pack(fill="x")
-
-        widgets: list[tk.Widget] = [row]
-        if slot is not None:
-            # 슬롯 번호는 숫자 → 모노체
-            badge = tk.Label(
-                row,
-                text=slot,
-                bg=theme.SURFACE,
-                fg=theme.ACCENT,
-                font=theme.mono_font(theme.SIZE_BODY),
-                width=3,
-                padx=0,
-            )
-            badge.pack(side="left", padx=(theme.px(12), 0), pady=theme.px(8))
-            widgets.append(badge)
-
-        label = tk.Label(
-            row,
+    def _item(self, parent: tk.Frame, text: str, command: Callable[[], None], font: tuple) -> None:
+        btn = tk.Button(
+            parent,
             text=text,
-            bg=theme.SURFACE,
-            fg=theme.TEXT,
-            font=theme.ui_font(theme.SIZE_BODY),
             anchor="w",
-            padx=0 if slot is not None else theme.px(12),
-            justify="left",
+            command=command,
+            bg=theme.BG,
+            fg=theme.TEXT,
+            activebackground=theme.SURFACE_2,
+            activeforeground=theme.ACCENT_STRONG,
+            relief="flat",
+            bd=0,
+            padx=theme.px(16),
+            pady=theme.px(14),
+            font=font,
+            highlightthickness=theme.FOCUS_WIDTH,
+            highlightbackground=theme.BG,
+            highlightcolor=theme.FOCUS,
+            cursor="hand2",
         )
-        label.pack(side="left", fill="x", expand=True, padx=(theme.px(8), theme.px(14)), pady=theme.px(8), ipady=theme.px(4))
-        widgets.append(label)
-
-        def paint(bg: str) -> None:
-            for widget in widgets:
-                try:
-                    widget.configure(bg=bg)
-                except tk.TclError:
-                    pass
-
-        for widget in widgets:
-            widget.bind("<Enter>", lambda _e: paint(theme.SURFACE_2))
-            widget.bind("<Leave>", lambda _e: paint(theme.SURFACE))
-            widget.bind("<Button-1>", lambda _e: command())
+        btn.pack(fill="x", ipady=theme.px(4))
+        btn.bind("<Enter>", lambda _e: btn.configure(bg=theme.SURFACE_2))
+        btn.bind("<Leave>", lambda _e: btn.configure(bg=theme.BG))
 
     def _sep(self, parent: tk.Frame) -> None:
-        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=theme.px(10), pady=theme.px(5))
+        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=theme.px(8), pady=theme.px(4))
 
 
 _osd_win: tk.Toplevel | None = None
@@ -191,19 +147,23 @@ _osd_job: str | None = None
 
 def toast(root: tk.Tk, message: str, ms: int = 2200, level: str = "normal") -> None:
     """우하단 알림. 상태는 색 + 텍스트 라벨을 함께 표시한다."""
+    p = prefs.load_prefs()
+    font = prefs.ui_font(root, p)
+    base = theme.FONT_SIZE_PX.get(p["font_size"], 18)
     accent = theme.LEVEL_COLOR.get(level, theme.TEXT)
+
     win = tk.Toplevel(root)
     win.overrideredirect(True)
     win.attributes("-topmost", True)
     win.configure(bg=theme.BORDER_STRONG)
 
     frame = tk.Frame(win, bg=theme.SURFACE)
-    frame.pack(padx=2, pady=2)
+    frame.pack(padx=theme.px(2), pady=theme.px(2))
 
     # 좌측 상태 바 — 색만으로 구분하지 않도록 아래 라벨과 병행
     tk.Frame(frame, bg=accent, width=theme.px(5)).pack(side="left", fill="y")
 
-    body = tk.Frame(frame, bg=theme.SURFACE, padx=theme.px(18), pady=theme.px(14))
+    body = tk.Frame(frame, bg=theme.SURFACE, padx=theme.px(20), pady=theme.px(16))
     body.pack(side="left", fill="both", expand=True)
 
     tag = theme.LEVEL_LABEL.get(level, "")
@@ -213,7 +173,7 @@ def toast(root: tk.Tk, message: str, ms: int = 2200, level: str = "normal") -> N
             text=tag,
             bg=theme.SURFACE,
             fg=accent,
-            font=theme.ui_font(theme.SIZE_SMALL),
+            font=theme.font_tuple(font[0], max(12, base - 3)),
             anchor="w",
         ).pack(anchor="w", pady=(0, theme.px(6)))
 
@@ -222,10 +182,10 @@ def toast(root: tk.Tk, message: str, ms: int = 2200, level: str = "normal") -> N
         text=message,
         bg=theme.SURFACE,
         fg=theme.TEXT,
-        font=theme.ui_font(theme.SIZE_BODY),
+        font=font,
         justify="left",
         anchor="w",
-        wraplength=theme.px(460),
+        wraplength=theme.px(440),
     ).pack(anchor="w")
 
     win.update_idletasks()
@@ -245,12 +205,20 @@ def show_profile_osd(
     fade_ms: int = 280,
     steps: int = 12,
 ) -> None:
-    """Large centered snapshot name with fade-in / fade-out."""
+    """Large centered snapshot name with fade-in / fade-out (no bold — size hierarchy)."""
     global _osd_win, _osd_job
     _cancel_osd(root)
 
-    title = (name or "").strip() or f"Slot {slot}"
+    p = prefs.load_prefs()
+    family = prefs.resolve_family(p["font_id"], root)
+    base = theme.FONT_SIZE_PX.get(p["font_size"], 18)
+    # Guide: no bold — use size only. OSD scales from base.
+    name_font = theme.font_tuple(family, max(64, base * 5))
+    slot_font = theme.mono_tuple(max(28, base * 2))
+    lang = p["lang"]
     accent = theme.LEVEL_COLOR.get(level, theme.TEXT)
+
+    title = (name or "").strip() or f"Slot {slot}"
 
     win = tk.Toplevel(root)
     win.overrideredirect(True)
@@ -259,24 +227,24 @@ def show_profile_osd(
     win.configure(bg=theme.BORDER_STRONG)
 
     outer = tk.Frame(win, bg=theme.BG, padx=theme.px(80), pady=theme.px(56))
-    outer.pack(padx=2, pady=2)
+    outer.pack(padx=theme.px(2), pady=theme.px(2))
     tk.Label(
         outer,
         text=title,
         bg=theme.BG,
         fg=accent,
-        font=theme.ui_font(theme.SIZE_OSD_NAME),
+        font=name_font,
         justify="center",
         wraplength=theme.px(1200),
     ).pack()
     tk.Label(
         outer,
-        text=f"NumPad {slot}",
+        text=t("numpad", lang, slot=slot),
         bg=theme.BG,
         fg=theme.TEXT_SUB,
-        font=theme.mono_font(theme.SIZE_OSD_SLOT),
+        font=slot_font,
         justify="center",
-    ).pack(pady=(theme.px(14), 0))
+    ).pack(pady=(theme.px(12), 0))
 
     tag = theme.LEVEL_LABEL.get(level, "")
     if tag:
@@ -285,7 +253,7 @@ def show_profile_osd(
             text=tag,
             bg=theme.BG,
             fg=accent,
-            font=theme.ui_font(theme.SIZE_H3),
+            font=theme.font_tuple(family, base + 4),
             justify="center",
         ).pack(pady=(theme.px(12), 0))
 
@@ -303,6 +271,14 @@ def show_profile_osd(
         pass
 
     _osd_win = win
+    if prefers_reduced_motion():
+        try:
+            win.attributes("-alpha", 0.92)
+        except tk.TclError:
+            pass
+        _osd_job = root.after(hold_ms, lambda: _destroy_osd(win))
+        return
+
     interval = max(12, fade_ms // steps)
     peak = 0.92
 
@@ -322,8 +298,8 @@ def show_profile_osd(
             if _osd_win is not win:
                 return
             nonlocal_state["n"] += 1
-            t = nonlocal_state["n"] / steps
-            eased = t * t * (3 - 2 * t)
+            progress = nonlocal_state["n"] / steps
+            eased = progress * progress * (3 - 2 * progress)
             start = getattr(win, "_osd_alpha", 0.0)
             set_alpha(start + (to - start) * eased)
             if nonlocal_state["n"] >= steps:

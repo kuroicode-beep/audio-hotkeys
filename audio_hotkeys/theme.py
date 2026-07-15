@@ -1,17 +1,15 @@
-# audio_hotkeys/theme.py
-"""SVIL 고대비 다크 디자인 토큰 (tkinter 적용).
+"""SVIL frontend design tokens (v1.1).
 
-색상은 이 모듈의 토큰만 사용한다 — 각 UI 파일에서 하드코딩 금지.
-크기는 논리 px로 적으며 px()가 모니터 DPI 배율을 곱한다.
-가이드: docs/Design_20260714_SVIL_프론트엔드_디자인가이드_ClaudeCode.md
+크기는 논리 px로 적는다. px()가 모니터 DPI 배율을 곱하고, 폰트 헬퍼는
+tkinter가 픽셀로 해석하도록 음수 크기를 돌려준다 (양수는 포인트).
 """
+
 from __future__ import annotations
 
 import ctypes
 import tkinter as tk
-import tkinter.font as tkfont
 
-# --- 색상 토큰 -------------------------------------------------------------
+# Colors — Outline: SVIL 프론트엔드 · 디자인 가이드 v1.1
 BG = "#0d0d12"
 SURFACE = "#16161d"
 SURFACE_2 = "#1f1f2a"
@@ -26,29 +24,79 @@ POSITIVE = "#7ee2a8"
 WARNING = "#ffd479"
 NEGATIVE = "#ff9b9b"
 FOCUS = "#ffd479"
+BLACK = "#000000"
 
 # 상태색은 항상 텍스트 라벨과 함께 쓴다 (색상만으로 구분 금지).
 LEVEL_COLOR = {"normal": TEXT, "warning": WARNING, "error": NEGATIVE, "positive": POSITIVE}
 LEVEL_LABEL = {"normal": "", "warning": "⚠ 주의", "error": "✖ 오류", "positive": "✓ 완료"}
 
-# --- 타이포그래피 ----------------------------------------------------------
-# 로컬 설치 폰트만 사용 (CDN 금지). 우선순위대로 실재하는 첫 항목을 고른다.
-# 한글 Windows는 Malgun Gothic을 "맑은 고딕"으로 등록하므로 양쪽을 모두 둔다.
-UI_FAMILIES = ("KyoboHandwriting2019", "Pretendard", "Malgun Gothic", "맑은 고딕", "Segoe UI")
-MONO_FAMILIES = ("Consolas", "D2Coding", "Courier New")
+# Typography
+FONT_DEFAULT_ID = "kyobo-handwriting-2019"
+FONT_STACK_DEFAULT = ("KyoboHandwriting2019", "Pretendard", "Malgun Gothic", "Segoe UI")
+FONT_MONO = ("Consolas", "Cascadia Mono", "Courier New")
 
-# 본문 기준 18px, 전체 최소선 12px (논리 px).
-SIZE_BODY = 18
-SIZE_SMALL = 15
-SIZE_MICRO = 12
-SIZE_H3 = 22
-SIZE_H2 = 28
-SIZE_OSD_NAME = 96
-SIZE_OSD_SLOT = 32
+FONT_SIZE_PX = {
+    "S": 16,
+    "M": 18,
+    "L": 20,
+}
+FONT_SIZE_DEFAULT = "M"
 
+# Layout
+TARGET_MIN = 50
+RADIUS_BTN = 12
+RADIUS_CARD = 16
+PAD_CARD = 22
+FOCUS_WIDTH = 3
+BORDER_WIDTH = 2
+
+# Font catalog (only ids that resolve locally are selectable at runtime)
+FONT_CATALOG: list[dict[str, str]] = [
+    {
+        "id": "kyobo-handwriting-2019",
+        "label": "교보손글씨2019",
+        "family": "KyoboHandwriting2019",
+    },
+    {
+        "id": "gothic",
+        "label": "고딕",
+        "family": "Pretendard",  # resolve falls back to Malgun Gothic
+    },
+    {
+        "id": "nanum-gothic",
+        "label": "나눔고딕",
+        "family": "NanumGothic",
+    },
+    {
+        "id": "line-seed",
+        "label": "라인시드체",
+        "family": "LINE Seed Sans KR",
+    },
+    {
+        "id": "gowun-dodum",
+        "label": "고운돋움체",
+        "family": "Gowun Dodum",
+    },
+    {
+        "id": "cafe24-dongdong",
+        "label": "카페24동동체",
+        "family": "Cafe24Dongdong",
+    },
+    {
+        "id": "tmoney-round",
+        "label": "티머니둥근바람체",
+        "family": "TmoneyRoundWind",
+    },
+    {
+        "id": "recipe-korea",
+        "label": "레코체",
+        "family": "Recipekorea",
+    },
+]
+
+
+# --- DPI -------------------------------------------------------------------
 _scale = 1.0
-_ui_family: str | None = None
-_mono_family: str | None = None
 
 
 def enable_dpi_awareness() -> None:
@@ -58,18 +106,16 @@ def enable_dpi_awareness() -> None:
     (200% 모니터에서 특히). 저시력 사용자에게는 그대로 가독성 손실이라
     per-monitor v2로 선언하고 크기는 px()로 직접 환산한다.
     """
-    for fn, arg in (
+    for target, arg in (
         ("shcore.SetProcessDpiAwarenessContext", -4),  # PER_MONITOR_AWARE_V2
         ("user32.SetProcessDpiAwarenessContext", -4),
         ("shcore.SetProcessDpiAwareness", 2),
         ("user32.SetProcessDPIAware", None),
     ):
-        dll_name, func_name = fn.split(".")
+        dll_name, func_name = target.split(".")
         try:
-            dll = getattr(ctypes.windll, dll_name)
-            func = getattr(dll, func_name)
-            ok = func() if arg is None else func(arg)
-            if ok:
+            func = getattr(getattr(ctypes.windll, dll_name), func_name)
+            if func() if arg is None else func(arg):
                 return
         except (AttributeError, OSError):
             continue
@@ -94,39 +140,10 @@ def px(value: int) -> int:
     return max(1, round(value * _scale))
 
 
-def _pick(candidates: tuple[str, ...], fallback: str) -> str:
-    try:
-        available = {name.lower() for name in tkfont.families()}
-    except Exception:  # noqa: BLE001 - no Tk root yet
-        return fallback
-    for name in candidates:
-        if name.lower() in available:
-            return name
-    return fallback
+def font_tuple(family: str, size: int) -> tuple:
+    """size는 논리 px. tkinter는 음수를 픽셀로 해석한다 (양수 = 포인트)."""
+    return (family, -px(size))
 
 
-def ui_family() -> str:
-    global _ui_family
-    if _ui_family is None:
-        _ui_family = _pick(UI_FAMILIES, "Segoe UI")
-    return _ui_family
-
-
-def mono_family() -> str:
-    global _mono_family
-    if _mono_family is None:
-        _mono_family = _pick(MONO_FAMILIES, "Courier New")
-    return _mono_family
-
-
-def ui_font(size: int = SIZE_BODY) -> tuple[str, int]:
-    """본문 폰트. bold 합성 금지 — 위계는 크기·색으로만 준다.
-
-    tkinter는 음수 크기를 픽셀로 해석한다 (양수는 포인트).
-    """
-    return (ui_family(), -px(size))
-
-
-def mono_font(size: int = SIZE_BODY) -> tuple[str, int]:
-    """숫자·ID·버전·코드 전용 모노체."""
-    return (mono_family(), -px(size))
+def mono_tuple(size: int) -> tuple:
+    return (FONT_MONO[0], -px(size))

@@ -11,9 +11,11 @@ from pystray._win32 import Icon as WinIcon
 
 from . import audio, config, theme
 from .hotkeys import HotkeyService
+from .i18n import t
 from .settings import open_settings
 from .tray import DarkTrayMenu, make_icon, show_profile_osd, toast
 from .version import APP_VERSION
+from .win_shell import force_app_dark_mode
 
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
@@ -67,14 +69,14 @@ class App:
 
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
-            on_error=lambda text: self.root.after(0, lambda t=text: toast(self.root, t, level="warning")),
+            on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
         )
 
     def start(self) -> None:
         try:
             self.hotkeys.start()
         except Exception as exc:  # noqa: BLE001
-            toast(self.root, f"단축키 시작 실패: {exc}", level="error")
+            toast(self.root, t("hotkey_failed", error=exc), level="error")
 
         self.icon.run_detached()
         self.root.after(400, self._startup_toast)
@@ -85,23 +87,23 @@ class App:
         if warning:
             toast(self.root, warning, level="warning", ms=6000)
             return
-        toast(self.root, f"audio-hotkeys v{APP_VERSION} 실행 중\nCtrl+Alt+NumPad 0–9")
+        toast(self.root, t("running_toast"))
 
     def open_settings(self) -> None:
-        open_settings(on_saved=lambda: toast(self.root, "Snapshots saved"))
+        open_settings(on_saved=lambda: toast(self.root, t("snapshots_saved")))
 
     def apply_slot(self, slot: str) -> None:
         data = config.load_config()
         snap = data["snapshots"].get(slot)
         if not snap:
-            toast(self.root, f"슬롯 {slot} 이(가) 없습니다", level="error")
+            toast(self.root, t("slot_missing", slot=slot), level="error")
             return
         name = str(snap.get("name") or "").strip() or f"Slot {slot}"
         try:
             result = audio.apply_snapshot(snap)
         except Exception as exc:  # noqa: BLE001
             show_profile_osd(self.root, slot, name, level="error")
-            toast(self.root, f"적용 실패: {audio.com_message(exc)}", level="error")
+            toast(self.root, t("apply_failed", error=audio.com_message(exc)), level="error")
             return
         # The profile OSD is the whole point of the hotkey — show it even when a
         # single device is stale, and route the detail to its own toast.
@@ -125,6 +127,7 @@ def main() -> int:
     if sys.platform != "win32":
         print("audio-hotkeys supports Windows only", file=sys.stderr)
         return 1
+    force_app_dark_mode()
     App().start()
     return 0
 
