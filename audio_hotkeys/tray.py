@@ -201,11 +201,16 @@ def show_profile_osd(
     name: str = "",
     *,
     level: str = "normal",
+    tag: str | None = None,
     hold_ms: int = 1100,
     fade_ms: int = 280,
     steps: int = 12,
 ) -> None:
-    """Large centered snapshot name with fade-in / fade-out (no bold — size hierarchy)."""
+    """Large centered snapshot name with fade-in / fade-out (no bold — size hierarchy).
+
+    `tag` overrides the level's default label so the OSD can say what happened
+    (applied vs saved) rather than only colouring it.
+    """
     global _osd_win, _osd_job
     _cancel_osd(root)
 
@@ -246,11 +251,11 @@ def show_profile_osd(
         justify="center",
     ).pack(pady=(theme.px(12), 0))
 
-    tag = theme.LEVEL_LABEL.get(level, "")
-    if tag:
+    label = theme.LEVEL_LABEL.get(level, "") if tag is None else tag
+    if label:
         tk.Label(
             outer,
-            text=tag,
+            text=label,
             bg=theme.BG,
             fg=accent,
             font=theme.font_tuple(family, base + 4),

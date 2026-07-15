@@ -164,6 +164,24 @@ def resolve_device(device_id: str, device_name: str, flow: str) -> tuple[str, st
     return "", f"{label} 장치가 연결 해제되어 건너뛰었습니다 (다시 선택해 저장하세요)"
 
 
+def capture_system() -> dict:
+    """Live default devices + volumes as snapshot fields.
+
+    Names are captured next to ids so the snapshot survives a later id change
+    — see resolve_device().
+    """
+    fields: dict = {}
+    for flow, id_field, name_field, vol_field in (
+        ("output", "output_id", "output_name", "output_volume"),
+        ("input", "input_id", "input_name", "input_volume"),
+    ):
+        device = get_default_device(flow)
+        fields[id_field] = device.id if device else ""
+        fields[name_field] = device.name if device else ""
+        fields[vol_field] = get_volume(flow)
+    return fields
+
+
 def apply_snapshot(snapshot: dict) -> ApplyResult:
     from . import kakao
 

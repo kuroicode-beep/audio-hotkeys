@@ -228,8 +228,14 @@ class SettingsWindow:
 
         header = tk.Frame(outer, bg=theme.BG)
         header.pack(fill="x", pady=(0, theme.px(12)))
+        self._secondary_button(header, t("update_history", self.lang), self._show_history).pack(side="right")
+
+        hotkey_help = tk.Frame(header, bg=theme.BG)
+        hotkey_help.pack(side="left", fill="x")
+        apply_row = tk.Frame(hotkey_help, bg=theme.BG)
+        apply_row.pack(anchor="w")
         tk.Label(
-            header,
+            apply_row,
             text=t("hotkeys_fixed", self.lang),
             bg=theme.BG,
             fg=theme.TEXT_SUB,
@@ -239,13 +245,21 @@ class SettingsWindow:
         ).pack(side="left")
         # 버전은 상시 표시 + 숫자이므로 모노체
         tk.Label(
-            header,
+            apply_row,
             text=f"v{APP_VERSION}",
             bg=theme.BG,
             fg=theme.ACCENT,
             font=mono,
         ).pack(side="left", padx=(theme.px(12), 0))
-        self._secondary_button(header, t("update_history", self.lang), self._show_history).pack(side="right")
+        tk.Label(
+            hotkey_help,
+            text=t("hotkeys_save", self.lang),
+            bg=theme.BG,
+            fg=theme.TEXT_SUB,
+            font=font,
+            anchor="w",
+            justify="left",
+        ).pack(anchor="w")
 
         slot_row = tk.Frame(outer, bg=theme.BG)
         slot_row.pack(fill="x", pady=(0, 12))

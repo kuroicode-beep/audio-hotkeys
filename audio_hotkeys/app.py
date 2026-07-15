@@ -3,13 +3,14 @@ from __future__ import annotations
 import ctypes
 import sys
 import tkinter as tk
+from copy import deepcopy
 from ctypes import wintypes
 from typing import Callable
 
 import pystray
 from pystray._win32 import Icon as WinIcon
 
-from . import audio, config, theme
+from . import audio, config, kakao, theme
 from .hotkeys import HotkeyService
 from .i18n import t
 from .settings import open_settings
@@ -69,6 +70,7 @@ class App:
 
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
+            on_save=lambda slot: self.root.after(0, lambda s=slot: self.save_slot(s)),
             on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
         )
 
@@ -110,6 +112,35 @@ class App:
         show_profile_osd(self.root, slot, name, level="warning" if result.warnings else "normal")
         if result.warnings:
             toast(self.root, "\n".join(result.warnings), level="warning", ms=5000)
+
+    def save_slot(self, slot: str) -> None:
+        """Ctrl+Alt+Shift+NumPad N — snapshot the live audio state into slot N."""
+        data = config.load_config()
+        snap = data["snapshots"].get(slot) or deepcopy(config.EMPTY_SNAPSHOT)
+        # Keep the label the user gave this slot; only the devices change.
+        name = str(snap.get("name") or "").strip() or f"Slot {slot}"
+        try:
+            captured = audio.capture_system()
+            kakao_fields = kakao.capture_kakao()
+        except Exception as exc:  # noqa: BLE001
+            toast(self.root, t("save_failed", error=audio.com_message(exc)), level="error")
+            return
+
+        snap.update(captured)
+        # An empty dict means KakaoTalk is not running — leave the slot's
+        # existing KakaoTalk fields alone rather than wiping them.
+        snap.update(kakao_fields)
+        snap["name"] = name
+        data["snapshots"][slot] = snap
+        try:
+            config.save_config(data)
+        except OSError as exc:
+            toast(self.root, t("save_failed", error=exc), level="error")
+            return
+
+        show_profile_osd(self.root, slot, name, level="positive", tag=t("saved_tag"))
+        detail = t("captured_kakao_too") if kakao_fields else t("captured_no_kakao")
+        toast(self.root, t("saved_current", slot=slot, summary=detail), level="positive", ms=3000)
 
     def quit(self) -> None:
         try:

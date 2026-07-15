@@ -1,6 +1,6 @@
 # audio-hotkeys
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.1.0**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.2.0**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
@@ -55,8 +55,14 @@ Output: `dist\audio-hotkeys.exe`
 | Hotkey | Action |
 |--------|--------|
 | `Ctrl+Alt+NumPad 0` … `9` | Apply snapshot slot 0–9 |
+| `Ctrl+Alt+Shift+NumPad 0` … `9` | **Save** the live audio state into slot 0–9 |
 | Tray left-click | Open settings |
 | Tray right-click | Dark menu (apply slots / settings / quit) |
+
+**빠른 저장 (v1.2.0)** — 장치·볼륨을 원하는 대로 맞춰 둔 뒤 `Ctrl+Alt+Shift+NumPad N`을 누르면
+설정 창을 열지 않고 그대로 슬롯 N에 저장됩니다. 슬롯 이름은 유지되고, 장치 **이름**까지 함께
+저장되므로 이후 장치 ID가 바뀌어도 자동으로 재연결됩니다. KakaoTalk이 실행 중이면 함께 저장하고,
+꺼져 있으면 그 슬롯의 기존 KakaoTalk 설정을 지우지 않고 그대로 둡니다.
 
 In settings:
 
@@ -89,5 +95,8 @@ Config file: `%LOCALAPPDATA%\audio-hotkeys\config.json`
 
 USB 재연결·드라이버 재설치로 장치 ID가 바뀌면 저장해 둔 ID가 무효가 됩니다. v1.1.0부터는
 스냅샷이 장치 **이름**도 함께 저장해 자동으로 재연결하고, 이름까지 못 찾으면 그 필드만 건너뛴 뒤
-나머지를 적용합니다. 설정에서 장치를 다시 고르고 **슬롯 저장**을 누르면 이후로는 자동 복구됩니다.
-(v1.0.0에서 저장한 스냅샷에는 이름이 없으므로 한 번은 다시 저장해 주셔야 합니다.)
+나머지를 적용합니다.
+
+v1.0.0에서 저장한 스냅샷에는 이름이 없으므로 한 번은 다시 저장해야 합니다. 가장 빠른 방법은
+**원하는 장치·볼륨으로 맞춘 뒤 `Ctrl+Alt+Shift+NumPad N`** 을 누르는 것입니다 — 이름까지 함께
+저장되어 이후로는 자동 복구됩니다. (설정 창에서 장치를 고르고 **슬롯 저장**을 눌러도 됩니다.)

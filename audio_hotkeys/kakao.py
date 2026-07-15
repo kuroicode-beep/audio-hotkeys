@@ -135,6 +135,29 @@ def get_kakao_devices() -> dict[str, str]:
     return result
 
 
+def capture_kakao() -> dict:
+    """Live KakaoTalk device/volume as snapshot fields.
+
+    Returns {} when KakaoTalk is not running or svcl is missing, so the caller
+    keeps whatever the slot already had instead of blanking it.
+    """
+    if not find_kakao_pids() or svcl_path() is None:
+        return {}
+    devices = get_kakao_devices()
+    fields: dict = {}
+    for key, flow, id_field, name_field in (
+        ("output_id", "output", "kakao_output_id", "kakao_output_name"),
+        ("input_id", "input", "kakao_input_id", "kakao_input_name"),
+    ):
+        device_id = devices.get(key) or ""
+        fields[id_field] = device_id
+        name = audio_mod._name_for_id(device_id, flow) if device_id else ""
+        # _name_for_id echoes the id back when it cannot resolve a name.
+        fields[name_field] = "" if name == device_id else name
+    fields["kakao_output_volume"] = get_kakao_output_volume()
+    return fields
+
+
 def apply_kakao_snapshot(snapshot: dict) -> tuple[list[str], list[str]]:
     """Apply the KakaoTalk-only fields. Returns (summary_parts, warnings)."""
     parts: list[str] = []
