@@ -33,11 +33,15 @@ VK_NUMLOCK = 0x90
 ERROR_HOTKEY_ALREADY_REGISTERED = 1409
 
 VK_NUMPAD = {i: 0x60 + i for i in range(10)}
+VK_DECIMAL = 0x6E  # NumPad "." — needs NumLock, like the digits
+VK_OEM_PERIOD = 0xBE  # main-keyboard "." — works with NumLock off
 
 # Ctrl+Alt+NumPad N applies slot N; adding Shift saves the live audio state
-# into slot N. Two id ranges keep the two actions apart in the message loop.
+# into slot N; Ctrl+Alt+"." toggles back to the previously applied slot.
+# Separate id ranges keep the actions apart in the message loop.
 APPLY_ID_BASE = 1
 SAVE_ID_BASE = 11
+TOGGLE_IDS = (21, 22)
 
 
 def numlock_on() -> bool:
@@ -57,10 +61,12 @@ class HotkeyService:
         self,
         on_slot: Callable[[str], None],
         on_save: Callable[[str], None] | None = None,
+        on_toggle: Callable[[], None] | None = None,
         on_error: Callable[[str], None] | None = None,
     ) -> None:
         self._on_slot = on_slot
         self._on_save = on_save
+        self._on_toggle = on_toggle
         self._on_error = on_error
         self._thread: threading.Thread | None = None
         self._thread_id = 0
@@ -68,6 +74,7 @@ class HotkeyService:
         self.failures: list[tuple[str, str]] = []
         self.save_failures: list[tuple[str, str]] = []
         self.registered: list[int] = []
+        self.toggle_live = False
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -76,6 +83,7 @@ class HotkeyService:
         self.failures = []
         self.save_failures = []
         self.registered = []
+        self.toggle_live = False
         self._thread = threading.Thread(target=self._run, name="hotkeys", daemon=True)
         self._thread.start()
         if not self._ready.wait(timeout=5):
@@ -97,6 +105,8 @@ class HotkeyService:
                 continue
             slots = ", ".join(slot for slot, _ in failures)
             lines.append(f"{label} 단축키 등록 실패: NumPad {slots}\n{failures[0][1]}")
+        if self._on_toggle is not None and not self.toggle_live:
+            lines.append("토글 단축키(Ctrl+Alt+.) 등록에 실패했습니다.")
         if not numlock_on():
             lines.append("NumLock이 꺼져 있어 NumPad 단축키가 동작하지 않습니다.")
         return "\n".join(lines)
@@ -122,6 +132,14 @@ class HotkeyService:
             if reason:
                 self.save_failures.append((str(slot), reason))
 
+        if self._on_toggle is None:
+            return
+        # Both "." keys drive the same toggle. The main-keyboard one keeps
+        # working when NumLock is off, so either alone is enough.
+        for hotkey_id, vk in zip(TOGGLE_IDS, (VK_DECIMAL, VK_OEM_PERIOD)):
+            if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT, vk):
+                self.toggle_live = True
+
     def _run(self) -> None:
         self._thread_id = kernel32.GetCurrentThreadId()
         try:
@@ -131,11 +149,14 @@ class HotkeyService:
             # through self.failures, not by leaving the caller blocked.
             self._ready.set()
 
-        if (self.failures or self.save_failures) and self._on_error:
-            try:
-                self._on_error(self.status_warning())
-            except Exception:
-                pass
+        if self._on_error:
+            warning = self.status_warning()
+            # NumLock-off alone is reported by the startup toast, not here.
+            if self.failures or self.save_failures or (self._on_toggle and not self.toggle_live):
+                try:
+                    self._on_error(warning)
+                except Exception:
+                    pass
 
         try:
             msg = wintypes.MSG()
@@ -155,13 +176,16 @@ class HotkeyService:
             self.registered = []
 
     def _dispatch(self, hotkey_id: int) -> None:
-        if hotkey_id >= SAVE_ID_BASE:
-            handler, slot = self._on_save, hotkey_id - SAVE_ID_BASE
-        else:
-            handler, slot = self._on_slot, hotkey_id - APPLY_ID_BASE
-        if handler is None:
-            return
         try:
-            handler(str(slot))
+            if hotkey_id in TOGGLE_IDS:
+                if self._on_toggle is not None:
+                    self._on_toggle()
+                return
+            if hotkey_id >= SAVE_ID_BASE:
+                handler, slot = self._on_save, hotkey_id - SAVE_ID_BASE
+            else:
+                handler, slot = self._on_slot, hotkey_id - APPLY_ID_BASE
+            if handler is not None:
+                handler(str(slot))
         except Exception:
             pass

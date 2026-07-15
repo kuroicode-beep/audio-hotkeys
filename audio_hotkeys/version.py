@@ -2,10 +2,17 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.3.0",
+        "2026-07-16",
+        "직전 슬롯과 오가는 토글 단축키 추가 (Ctrl+Alt+.). "
+        "헤드셋↔스피커처럼 두 프로필을 한 키로 왕복합니다. "
+        "NumPad `.`와 메인 키보드 `.` 둘 다 동작하며, 메인 쪽은 NumLock이 꺼져 있어도 됩니다.",
+    ),
     (
         "1.2.0",
         "2026-07-16",

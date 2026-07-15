@@ -251,15 +251,16 @@ class SettingsWindow:
             fg=theme.ACCENT,
             font=mono,
         ).pack(side="left", padx=(theme.px(12), 0))
-        tk.Label(
-            hotkey_help,
-            text=t("hotkeys_save", self.lang),
-            bg=theme.BG,
-            fg=theme.TEXT_SUB,
-            font=font,
-            anchor="w",
-            justify="left",
-        ).pack(anchor="w")
+        for key in ("hotkeys_save", "hotkeys_toggle"):
+            tk.Label(
+                hotkey_help,
+                text=t(key, self.lang),
+                bg=theme.BG,
+                fg=theme.TEXT_SUB,
+                font=font,
+                anchor="w",
+                justify="left",
+            ).pack(anchor="w")
 
         slot_row = tk.Frame(outer, bg=theme.BG)
         slot_row.pack(fill="x", pady=(0, 12))

@@ -1,6 +1,6 @@
 # audio-hotkeys
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.2.0**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.3.0**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
@@ -56,8 +56,14 @@ Output: `dist\audio-hotkeys.exe`
 |--------|--------|
 | `Ctrl+Alt+NumPad 0` … `9` | Apply snapshot slot 0–9 |
 | `Ctrl+Alt+Shift+NumPad 0` … `9` | **Save** the live audio state into slot 0–9 |
+| `Ctrl+Alt+.` | **Toggle** back to the previously applied slot |
 | Tray left-click | Open settings |
 | Tray right-click | Dark menu (apply slots / settings / quit) |
+
+**직전 슬롯 토글 (v1.3.0)** — `Ctrl+Alt+.`을 누르면 마지막으로 적용한 슬롯과 그 직전 슬롯을
+한 키로 왕복합니다 (헤드셋↔스피커 등). NumPad `.`와 메인 키보드 `.` 둘 다 동작하며, 메인 키보드
+쪽은 **NumLock이 꺼져 있어도** 됩니다. 기록은 메모리에만 두므로 앱을 새로 켠 직후에는 슬롯을
+두 개 적용한 뒤부터 동작합니다.
 
 **빠른 저장 (v1.2.0)** — 장치·볼륨을 원하는 대로 맞춰 둔 뒤 `Ctrl+Alt+Shift+NumPad N`을 누르면
 설정 창을 열지 않고 그대로 슬롯 N에 저장됩니다. 슬롯 이름은 유지되고, 장치 **이름**까지 함께

@@ -68,9 +68,15 @@ class App:
         self.icon.ui_root = self.root
         self.icon.on_left_click = self.open_settings
 
+        # Ctrl+Alt+"." ping-pongs between these two. In memory only — a fresh
+        # start has nothing to go back to yet.
+        self._last_slot: str | None = None
+        self._prev_slot: str | None = None
+
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
             on_save=lambda slot: self.root.after(0, lambda s=slot: self.save_slot(s)),
+            on_toggle=lambda: self.root.after(0, self.toggle_slot),
             on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
         )
 
@@ -107,11 +113,27 @@ class App:
             show_profile_osd(self.root, slot, name, level="error")
             toast(self.root, t("apply_failed", error=audio.com_message(exc)), level="error")
             return
+        self._remember(slot)
         # The profile OSD is the whole point of the hotkey — show it even when a
         # single device is stale, and route the detail to its own toast.
         show_profile_osd(self.root, slot, name, level="warning" if result.warnings else "normal")
         if result.warnings:
             toast(self.root, "\n".join(result.warnings), level="warning", ms=5000)
+
+    def _remember(self, slot: str) -> None:
+        """Track the last two distinct slots so toggle_slot() can ping-pong."""
+        if slot == self._last_slot:
+            return
+        self._prev_slot = self._last_slot
+        self._last_slot = slot
+
+    def toggle_slot(self) -> None:
+        """Ctrl+Alt+"." — go back to the slot applied before the current one."""
+        if self._prev_slot is None:
+            toast(self.root, t("no_previous_slot"), level="warning")
+            return
+        # apply_slot -> _remember swaps last/prev, so pressing again comes back.
+        self.apply_slot(self._prev_slot)
 
     def save_slot(self, slot: str) -> None:
         """Ctrl+Alt+Shift+NumPad N — snapshot the live audio state into slot N."""
