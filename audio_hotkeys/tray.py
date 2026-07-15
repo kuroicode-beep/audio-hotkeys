@@ -1,25 +1,29 @@
+# audio_hotkeys/tray.py
 from __future__ import annotations
 
-import threading
 import tkinter as tk
 from typing import Callable
 
 from PIL import Image, ImageDraw
 
-from . import config
+from . import config, theme
+from .version import APP_VERSION
 
-BG = "#121212"
-FG = "#F2F2F2"
-HOVER = "#2A2A2A"
-FOCUS = "#FFFF00"
-BORDER = "#3A3A3A"
-FONT = ("Segoe UI", 12)
+
+def _rgb(token: str) -> tuple[int, int, int]:
+    """'#rrggbb' 토큰을 Pillow RGB 튜플로."""
+    return tuple(int(token[i : i + 2], 16) for i in (1, 3, 5))  # type: ignore[return-value]
 
 
 def make_icon(size: int = 64) -> Image.Image:
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    draw.ellipse((4, 4, size - 5, size - 5), fill=(30, 30, 30, 255), outline=(242, 242, 242, 255), width=3)
+    draw.ellipse(
+        (4, 4, size - 5, size - 5),
+        fill=(*_rgb(theme.SURFACE), 255),
+        outline=(*_rgb(theme.ACCENT_STRONG), 255),
+        width=3,
+    )
     # simple speaker wedge
     draw.polygon(
         [
@@ -30,7 +34,7 @@ def make_icon(size: int = 64) -> Image.Image:
             (size * 0.45, size * 0.62),
             (size * 0.28, size * 0.62),
         ],
-        fill=(242, 242, 242, 255),
+        fill=(*_rgb(theme.ACCENT_STRONG), 255),
     )
     return img
 
@@ -56,24 +60,40 @@ class DarkTrayMenu:
         popup = tk.Toplevel(self.root)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(bg=BORDER)
+        popup.configure(bg=theme.BORDER)
         self._popup = popup
 
-        frame = tk.Frame(popup, bg=BG, highlightthickness=0)
+        frame = tk.Frame(popup, bg=theme.SURFACE, highlightthickness=0)
         frame.pack(padx=1, pady=1)
 
-        self._item(frame, "Settings…", self._wrap(self.on_settings))
+        header = tk.Frame(frame, bg=theme.SURFACE)
+        header.pack(fill="x", padx=theme.px(14), pady=(theme.px(10), theme.px(6)))
+        tk.Label(
+            header,
+            text="audio-hotkeys",
+            bg=theme.SURFACE,
+            fg=theme.TEXT_SUB,
+            font=theme.ui_font(theme.SIZE_MICRO),
+        ).pack(side="left")
+        tk.Label(
+            header,
+            text=f"v{APP_VERSION}",
+            bg=theme.SURFACE,
+            fg=theme.TEXT_SUB,
+            font=theme.mono_font(theme.SIZE_MICRO),
+        ).pack(side="right")
+
+        self._item(frame, "설정 열기…", self._wrap(self.on_settings))
         self._sep(frame)
 
         data = config.load_config()
         for key in config.SLOT_KEYS:
             snap = data["snapshots"][key]
             label = (snap.get("name") or "").strip() or f"Slot {key}"
-            text = f"[{key}]  {label}"
-            self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)))
+            self._item(frame, label, self._wrap(lambda k=key: self.on_apply(k)), slot=key)
 
         self._sep(frame)
-        self._item(frame, "Quit", self._wrap(self.on_quit))
+        self._item(frame, "종료", self._wrap(self.on_quit))
 
         popup.update_idletasks()
         w = popup.winfo_reqwidth()
@@ -111,66 +131,106 @@ class DarkTrayMenu:
 
         return runner
 
-    def _item(self, parent: tk.Frame, text: str, command: Callable[[], None]) -> None:
-        btn = tk.Button(
-            parent,
+    def _item(
+        self,
+        parent: tk.Frame,
+        text: str,
+        command: Callable[[], None],
+        slot: str | None = None,
+    ) -> None:
+        row = tk.Frame(parent, bg=theme.SURFACE, cursor="hand2")
+        row.pack(fill="x")
+
+        widgets: list[tk.Widget] = [row]
+        if slot is not None:
+            # 슬롯 번호는 숫자 → 모노체
+            badge = tk.Label(
+                row,
+                text=slot,
+                bg=theme.SURFACE,
+                fg=theme.ACCENT,
+                font=theme.mono_font(theme.SIZE_BODY),
+                width=3,
+                padx=0,
+            )
+            badge.pack(side="left", padx=(theme.px(12), 0), pady=theme.px(8))
+            widgets.append(badge)
+
+        label = tk.Label(
+            row,
             text=text,
+            bg=theme.SURFACE,
+            fg=theme.TEXT,
+            font=theme.ui_font(theme.SIZE_BODY),
             anchor="w",
-            command=command,
-            bg=BG,
-            fg=FG,
-            activebackground=HOVER,
-            activeforeground=FG,
-            relief="flat",
-            bd=0,
-            padx=12,
-            pady=6,
-            font=FONT,
-            highlightthickness=2,
-            highlightbackground=BG,
-            highlightcolor=FOCUS,
-            cursor="hand2",
+            padx=0 if slot is not None else theme.px(12),
+            justify="left",
         )
-        btn.pack(fill="x")
-        btn.bind("<Enter>", lambda _e: btn.configure(bg=HOVER))
-        btn.bind("<Leave>", lambda _e: btn.configure(bg=BG))
+        label.pack(side="left", fill="x", expand=True, padx=(theme.px(8), theme.px(14)), pady=theme.px(8), ipady=theme.px(4))
+        widgets.append(label)
+
+        def paint(bg: str) -> None:
+            for widget in widgets:
+                try:
+                    widget.configure(bg=bg)
+                except tk.TclError:
+                    pass
+
+        for widget in widgets:
+            widget.bind("<Enter>", lambda _e: paint(theme.SURFACE_2))
+            widget.bind("<Leave>", lambda _e: paint(theme.SURFACE))
+            widget.bind("<Button-1>", lambda _e: command())
 
     def _sep(self, parent: tk.Frame) -> None:
-        tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=8, pady=4)
+        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=theme.px(10), pady=theme.px(5))
 
 
 _osd_win: tk.Toplevel | None = None
 _osd_job: str | None = None
 
-NAME_FONT = ("Segoe UI", 96, "bold")
-SLOT_FONT = ("Segoe UI", 36)
-OSD_BG = "#0A0A0A"
-OSD_FG = "#FFFFFF"
-OSD_MUTED = "#C8C8C8"
 
-
-def toast(root: tk.Tk, message: str, ms: int = 2200) -> None:
+def toast(root: tk.Tk, message: str, ms: int = 2200, level: str = "normal") -> None:
+    """우하단 알림. 상태는 색 + 텍스트 라벨을 함께 표시한다."""
+    accent = theme.LEVEL_COLOR.get(level, theme.TEXT)
     win = tk.Toplevel(root)
     win.overrideredirect(True)
     win.attributes("-topmost", True)
-    win.configure(bg=BORDER)
-    frame = tk.Frame(win, bg=BG)
-    frame.pack(padx=1, pady=1)
-    lbl = tk.Label(
-        frame,
+    win.configure(bg=theme.BORDER_STRONG)
+
+    frame = tk.Frame(win, bg=theme.SURFACE)
+    frame.pack(padx=2, pady=2)
+
+    # 좌측 상태 바 — 색만으로 구분하지 않도록 아래 라벨과 병행
+    tk.Frame(frame, bg=accent, width=theme.px(5)).pack(side="left", fill="y")
+
+    body = tk.Frame(frame, bg=theme.SURFACE, padx=theme.px(18), pady=theme.px(14))
+    body.pack(side="left", fill="both", expand=True)
+
+    tag = theme.LEVEL_LABEL.get(level, "")
+    if tag:
+        tk.Label(
+            body,
+            text=tag,
+            bg=theme.SURFACE,
+            fg=accent,
+            font=theme.ui_font(theme.SIZE_SMALL),
+            anchor="w",
+        ).pack(anchor="w", pady=(0, theme.px(6)))
+
+    tk.Label(
+        body,
         text=message,
-        bg=BG,
-        fg=FG,
-        font=FONT,
-        padx=18,
-        pady=14,
+        bg=theme.SURFACE,
+        fg=theme.TEXT,
+        font=theme.ui_font(theme.SIZE_BODY),
         justify="left",
-        wraplength=420,
-    )
-    lbl.pack()
+        anchor="w",
+        wraplength=theme.px(460),
+    ).pack(anchor="w")
+
     win.update_idletasks()
-    x = win.winfo_screenwidth() - win.winfo_reqwidth() - 24
-    y = win.winfo_screenheight() - win.winfo_reqheight() - 72
+    x = win.winfo_screenwidth() - win.winfo_reqwidth() - theme.px(24)
+    y = win.winfo_screenheight() - win.winfo_reqheight() - theme.px(72)
     win.geometry(f"+{x}+{y}")
     win.after(ms, win.destroy)
 
@@ -180,6 +240,7 @@ def show_profile_osd(
     slot: str,
     name: str = "",
     *,
+    level: str = "normal",
     hold_ms: int = 1100,
     fade_ms: int = 280,
     steps: int = 12,
@@ -189,32 +250,44 @@ def show_profile_osd(
     _cancel_osd(root)
 
     title = (name or "").strip() or f"Slot {slot}"
+    accent = theme.LEVEL_COLOR.get(level, theme.TEXT)
 
     win = tk.Toplevel(root)
     win.overrideredirect(True)
     win.attributes("-topmost", True)
     win.attributes("-alpha", 0.0)
-    win.configure(bg=OSD_BG)
+    win.configure(bg=theme.BORDER_STRONG)
 
-    outer = tk.Frame(win, bg=OSD_BG, padx=80, pady=56)
-    outer.pack()
+    outer = tk.Frame(win, bg=theme.BG, padx=theme.px(80), pady=theme.px(56))
+    outer.pack(padx=2, pady=2)
     tk.Label(
         outer,
         text=title,
-        bg=OSD_BG,
-        fg=OSD_FG,
-        font=NAME_FONT,
+        bg=theme.BG,
+        fg=accent,
+        font=theme.ui_font(theme.SIZE_OSD_NAME),
         justify="center",
-        wraplength=1200,
+        wraplength=theme.px(1200),
     ).pack()
     tk.Label(
         outer,
         text=f"NumPad {slot}",
-        bg=OSD_BG,
-        fg=OSD_MUTED,
-        font=SLOT_FONT,
+        bg=theme.BG,
+        fg=theme.TEXT_SUB,
+        font=theme.mono_font(theme.SIZE_OSD_SLOT),
         justify="center",
-    ).pack(pady=(12, 0))
+    ).pack(pady=(theme.px(14), 0))
+
+    tag = theme.LEVEL_LABEL.get(level, "")
+    if tag:
+        tk.Label(
+            outer,
+            text=tag,
+            bg=theme.BG,
+            fg=accent,
+            font=theme.ui_font(theme.SIZE_H3),
+            justify="center",
+        ).pack(pady=(theme.px(12), 0))
 
     win.update_idletasks()
     sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()

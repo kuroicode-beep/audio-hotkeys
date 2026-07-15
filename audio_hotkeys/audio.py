@@ -115,38 +115,97 @@ def set_volume(flow: str, percent: int | None) -> None:
         volume.SetMute(0, None)
 
 
-def apply_snapshot(snapshot: dict) -> str:
+FLOW_LABEL = {"output": "출력", "input": "입력"}
+
+
+@dataclass
+class ApplyResult:
+    """Outcome of applying one snapshot. Never raises for a single bad field."""
+
+    summary: str
+    warnings: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return not self.warnings
+
+
+def com_message(exc: Exception) -> str:
+    """Readable text for a COMError, whose str() is a raw HRESULT tuple."""
+    if isinstance(exc, COMError):
+        return str(getattr(exc, "text", None) or exc.hresult)
+    return str(exc)
+
+
+def resolve_device(device_id: str, device_name: str, flow: str) -> tuple[str, str]:
+    """Map a saved snapshot device to a live one.
+
+    Device ids change on USB re-enumeration or driver reinstall, which used to
+    make SetDefaultEndpoint raise and abort the whole snapshot. Fall back to
+    matching the saved friendly name. Returns (live_id, warning).
+    """
+    if not device_id and not device_name:
+        return "", ""
+    label = FLOW_LABEL.get(flow, flow)
+    try:
+        devices = list_devices(flow)
+    except Exception as exc:  # noqa: BLE001
+        return "", f"{label} 장치 목록을 읽지 못했습니다: {com_message(exc)}"
+
+    if device_id and any(d.id == device_id for d in devices):
+        return device_id, ""
+    if device_name:
+        for device in devices:
+            if device.name == device_name:
+                return device.id, f"{label} 장치를 이름으로 재연결했습니다: {device_name}"
+    # 장치 GUID는 사용자에게 아무 의미가 없다 — 이름을 아는 경우에만 밝힌다.
+    if device_name:
+        return "", f"{label} 장치를 찾을 수 없습니다: {device_name} (연결 해제됨)"
+    return "", f"{label} 장치가 연결 해제되어 건너뛰었습니다 (다시 선택해 저장하세요)"
+
+
+def apply_snapshot(snapshot: dict) -> ApplyResult:
     from . import kakao
 
     parts: list[str] = []
+    warnings: list[str] = []
 
-    output_id = snapshot.get("output_id") or ""
-    input_id = snapshot.get("input_id") or ""
+    for flow, id_field, name_field, vol_field, tag in (
+        ("output", "output_id", "output_name", "output_volume", "Out"),
+        ("input", "input_id", "input_name", "input_volume", "In"),
+    ):
+        device_id, warning = resolve_device(
+            snapshot.get(id_field) or "",
+            snapshot.get(name_field) or "",
+            flow,
+        )
+        if warning:
+            warnings.append(warning)
+        if device_id:
+            try:
+                set_default_device(device_id)
+                parts.append(f"{tag}: {_name_for_id(device_id, flow)}")
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"{FLOW_LABEL[flow]} 장치 전환 실패: {com_message(exc)}")
 
-    if output_id:
-        set_default_device(output_id)
-        parts.append(f"Out: {_name_for_id(output_id, 'output')}")
+        volume = snapshot.get(vol_field)
+        if volume is not None:
+            try:
+                set_volume(flow, int(volume))
+                parts.append(f"{tag}Vol: {int(volume)}%")
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"{FLOW_LABEL[flow]} 볼륨 설정 실패: {com_message(exc)}")
 
-    if input_id:
-        set_default_device(input_id)
-        parts.append(f"In: {_name_for_id(input_id, 'input')}")
-
-    out_vol = snapshot.get("output_volume")
-    if out_vol is not None:
-        set_volume("output", int(out_vol))
-        parts.append(f"OutVol: {int(out_vol)}%")
-
-    in_vol = snapshot.get("input_volume")
-    if in_vol is not None:
-        set_volume("input", int(in_vol))
-        parts.append(f"InVol: {int(in_vol)}%")
-
-    parts.extend(kakao.apply_kakao_snapshot(snapshot))
+    kakao_parts, kakao_warnings = kakao.apply_kakao_snapshot(snapshot)
+    parts.extend(kakao_parts)
+    warnings.extend(kakao_warnings)
 
     label = snapshot.get("name") or "Snapshot"
     if not parts:
-        return f"{label}: (empty)"
-    return f"{label} — " + " | ".join(parts)
+        summary = f"{label}: (empty)" if not warnings else label
+    else:
+        summary = f"{label} — " + " | ".join(parts)
+    return ApplyResult(summary=summary, warnings=warnings)
 
 
 def volume_choices() -> list[str]:

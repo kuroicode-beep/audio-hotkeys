@@ -1,3 +1,6 @@
 """Ctrl+Alt+NumPad audio device/volume snapshots for Windows."""
 
-__version__ = "1.0.0"
+from .version import APP_VERSION, VERSION_HISTORY
+
+__version__ = APP_VERSION
+__all__ = ["APP_VERSION", "VERSION_HISTORY", "__version__"]

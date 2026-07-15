@@ -9,10 +9,11 @@ from typing import Callable
 import pystray
 from pystray._win32 import Icon as WinIcon
 
-from . import audio, config
+from . import audio, config, theme
 from .hotkeys import HotkeyService
 from .settings import open_settings
 from .tray import DarkTrayMenu, make_icon, show_profile_osd, toast
+from .version import APP_VERSION
 
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
@@ -41,9 +42,11 @@ class DarkIcon(WinIcon):
 class App:
     def __init__(self) -> None:
         config.ensure_config()
+        theme.enable_dpi_awareness()  # must precede the first Tk window
         self.root = tk.Tk()
+        theme.init_scale(self.root)
         self.root.withdraw()
-        self.root.title("audio-hotkeys")
+        self.root.title(f"audio-hotkeys v{APP_VERSION}")
 
         self.menu = DarkTrayMenu(
             self.root,
@@ -55,24 +58,34 @@ class App:
         self.icon = DarkIcon(
             "audio-hotkeys",
             make_icon(),
-            "audio-hotkeys",
+            f"audio-hotkeys v{APP_VERSION}",
             menu=None,
         )
         self.icon.dark_menu = self.menu
         self.icon.ui_root = self.root
         self.icon.on_left_click = self.open_settings
 
-        self.hotkeys = HotkeyService(on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)))
+        self.hotkeys = HotkeyService(
+            on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
+            on_error=lambda text: self.root.after(0, lambda t=text: toast(self.root, t, level="warning")),
+        )
 
     def start(self) -> None:
         try:
             self.hotkeys.start()
-        except OSError as exc:
-            toast(self.root, f"Hotkey register failed: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            toast(self.root, f"단축키 시작 실패: {exc}", level="error")
 
         self.icon.run_detached()
-        toast(self.root, "audio-hotkeys running\nCtrl+Alt+NumPad 0–9")
+        self.root.after(400, self._startup_toast)
         self.root.mainloop()
+
+    def _startup_toast(self) -> None:
+        warning = self.hotkeys.status_warning()
+        if warning:
+            toast(self.root, warning, level="warning", ms=6000)
+            return
+        toast(self.root, f"audio-hotkeys v{APP_VERSION} 실행 중\nCtrl+Alt+NumPad 0–9")
 
     def open_settings(self) -> None:
         open_settings(on_saved=lambda: toast(self.root, "Snapshots saved"))
@@ -81,14 +94,20 @@ class App:
         data = config.load_config()
         snap = data["snapshots"].get(slot)
         if not snap:
-            toast(self.root, f"Slot {slot} missing")
+            toast(self.root, f"슬롯 {slot} 이(가) 없습니다", level="error")
             return
+        name = str(snap.get("name") or "").strip() or f"Slot {slot}"
         try:
-            audio.apply_snapshot(snap)
-            name = str(snap.get("name") or "").strip() or f"Slot {slot}"
-            show_profile_osd(self.root, slot, name)
+            result = audio.apply_snapshot(snap)
         except Exception as exc:  # noqa: BLE001
-            toast(self.root, f"Apply failed: {exc}")
+            show_profile_osd(self.root, slot, name, level="error")
+            toast(self.root, f"적용 실패: {audio.com_message(exc)}", level="error")
+            return
+        # The profile OSD is the whole point of the hotkey — show it even when a
+        # single device is stale, and route the detail to its own toast.
+        show_profile_osd(self.root, slot, name, level="warning" if result.warnings else "normal")
+        if result.warnings:
+            toast(self.root, "\n".join(result.warnings), level="warning", ms=5000)
 
     def quit(self) -> None:
         try:

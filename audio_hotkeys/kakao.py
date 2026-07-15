@@ -135,40 +135,56 @@ def get_kakao_devices() -> dict[str, str]:
     return result
 
 
-def apply_kakao_snapshot(snapshot: dict) -> list[str]:
+def apply_kakao_snapshot(snapshot: dict) -> tuple[list[str], list[str]]:
+    """Apply the KakaoTalk-only fields. Returns (summary_parts, warnings)."""
     parts: list[str] = []
-    out_id = snapshot.get("kakao_output_id") or ""
-    in_id = snapshot.get("kakao_input_id") or ""
+    warnings: list[str] = []
     out_vol = snapshot.get("kakao_output_volume")
     in_vol = snapshot.get("kakao_input_volume")
+    raw_out = snapshot.get("kakao_output_id") or ""
+    raw_in = snapshot.get("kakao_input_id") or ""
 
-    wants = bool(out_id or in_id or out_vol is not None or in_vol is not None)
+    wants = bool(raw_out or raw_in or out_vol is not None or in_vol is not None)
     if not wants:
-        return parts
+        return parts, warnings
     if not find_kakao_pids():
-        parts.append("Kakao: not running")
-        return parts
+        parts.append("Kakao: 실행 중 아님")
+        return parts, warnings
     if svcl_path() is None:
-        parts.append("Kakao: svcl.exe missing")
-        return parts
+        warnings.append("svcl.exe를 찾을 수 없어 카카오톡 설정을 건너뛰었습니다.")
+        return parts, warnings
 
-    try:
-        if out_id:
+    out_id, warn = audio_mod.resolve_device(raw_out, snapshot.get("kakao_output_name") or "", "output")
+    if warn:
+        warnings.append(f"카카오톡 {warn}")
+    in_id, warn = audio_mod.resolve_device(raw_in, snapshot.get("kakao_input_name") or "", "input")
+    if warn:
+        warnings.append(f"카카오톡 {warn}")
+
+    if out_id:
+        try:
             set_kakao_output_device(out_id)
             parts.append(f"KakaoOut: {audio_mod._name_for_id(out_id, 'output')}")
-        if in_id:
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"카카오톡 출력 장치 실패: {audio_mod.com_message(exc)}")
+    if in_id:
+        try:
             set_kakao_input_device(in_id)
             parts.append(f"KakaoIn: {audio_mod._name_for_id(in_id, 'input')}")
-        vol = out_vol if out_vol is not None else in_vol
-        if vol is not None:
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"카카오톡 입력 장치 실패: {audio_mod.com_message(exc)}")
+
+    vol = out_vol if out_vol is not None else in_vol
+    if vol is not None:
+        try:
             n = set_kakao_session_volume(int(vol))
             label = "KakaoOutVol" if out_vol is not None else "KakaoVol"
             parts.append(f"{label}: {int(vol)}%×{n}")
             if out_vol is not None and in_vol is not None and int(out_vol) != int(in_vol):
-                parts.append("KakaoInVol: (app mixer uses out vol)")
-    except Exception as exc:  # noqa: BLE001
-        parts.append(f"Kakao error: {exc}")
-    return parts
+                parts.append("KakaoInVol: (앱 믹서는 출력 볼륨 하나만 사용)")
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"카카오톡 볼륨 실패: {audio_mod.com_message(exc)}")
+    return parts, warnings
 
 
 def _require_kakao() -> None:

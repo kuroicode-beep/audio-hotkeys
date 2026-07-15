@@ -11,14 +11,25 @@ CONFIG_PATH = CONFIG_DIR / "config.json"
 
 SLOT_KEYS = [str(i) for i in range(10)]
 
+# *_name mirrors each *_id so a snapshot survives a device id change
+# (USB re-enumeration, driver reinstall). The id is tried first, the name
+# is the fallback match.
+ID_FIELDS = ("output_id", "input_id", "kakao_output_id", "kakao_input_id")
+NAME_FIELDS = ("output_name", "input_name", "kakao_output_name", "kakao_input_name")
+VOLUME_FIELDS = ("output_volume", "input_volume", "kakao_output_volume", "kakao_input_volume")
+
 EMPTY_SNAPSHOT: dict[str, Any] = {
     "name": "",
     "output_id": "",
+    "output_name": "",
     "input_id": "",
+    "input_name": "",
     "output_volume": None,
     "input_volume": None,
     "kakao_output_id": "",
+    "kakao_output_name": "",
     "kakao_input_id": "",
+    "kakao_input_name": "",
     "kakao_output_volume": None,
     "kakao_input_volume": None,
 }
@@ -68,9 +79,9 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
             continue
         snap = deepcopy(EMPTY_SNAPSHOT)
         snap["name"] = str(raw.get("name") or base["snapshots"][key]["name"])
-        for field in ("output_id", "input_id", "kakao_output_id", "kakao_input_id"):
+        for field in ID_FIELDS + NAME_FIELDS:
             snap[field] = str(raw.get(field) or "")
-        for field in ("output_volume", "input_volume", "kakao_output_volume", "kakao_input_volume"):
+        for field in VOLUME_FIELDS:
             snap[field] = _volume(raw.get(field))
         base["snapshots"][key] = snap
     return base
