@@ -11,8 +11,10 @@ from pystray._win32 import Icon as WinIcon
 
 from . import audio, config
 from .hotkeys import HotkeyService
+from .i18n import t
 from .settings import open_settings
 from .tray import DarkTrayMenu, make_icon, show_profile_osd, toast
+from .win_shell import force_app_dark_mode
 
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
@@ -68,27 +70,27 @@ class App:
         try:
             self.hotkeys.start()
         except OSError as exc:
-            toast(self.root, f"Hotkey register failed: {exc}")
+            toast(self.root, t("hotkey_failed", error=exc))
 
         self.icon.run_detached()
-        toast(self.root, "audio-hotkeys running\nCtrl+Alt+NumPad 0–9")
+        toast(self.root, t("running_toast"))
         self.root.mainloop()
 
     def open_settings(self) -> None:
-        open_settings(on_saved=lambda: toast(self.root, "Snapshots saved"))
+        open_settings(on_saved=lambda: toast(self.root, t("snapshots_saved")))
 
     def apply_slot(self, slot: str) -> None:
         data = config.load_config()
         snap = data["snapshots"].get(slot)
         if not snap:
-            toast(self.root, f"Slot {slot} missing")
+            toast(self.root, t("slot_missing", slot=slot))
             return
         try:
             audio.apply_snapshot(snap)
             name = str(snap.get("name") or "").strip() or f"Slot {slot}"
             show_profile_osd(self.root, slot, name)
         except Exception as exc:  # noqa: BLE001
-            toast(self.root, f"Apply failed: {exc}")
+            toast(self.root, t("apply_failed", error=exc))
 
     def quit(self) -> None:
         try:
@@ -106,6 +108,7 @@ def main() -> int:
     if sys.platform != "win32":
         print("audio-hotkeys supports Windows only", file=sys.stderr)
         return 1
+    force_app_dark_mode()
     App().start()
     return 0
 

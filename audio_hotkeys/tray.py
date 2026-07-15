@@ -1,26 +1,24 @@
 from __future__ import annotations
 
-import threading
 import tkinter as tk
 from typing import Callable
 
 from PIL import Image, ImageDraw
 
-from . import config
-
-BG = "#121212"
-FG = "#F2F2F2"
-HOVER = "#2A2A2A"
-FOCUS = "#FFFF00"
-BORDER = "#3A3A3A"
-FONT = ("Segoe UI", 12)
+from . import config, prefs, theme
+from .i18n import t
+from .win_shell import prefers_reduced_motion
 
 
 def make_icon(size: int = 64) -> Image.Image:
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    draw.ellipse((4, 4, size - 5, size - 5), fill=(30, 30, 30, 255), outline=(242, 242, 242, 255), width=3)
-    # simple speaker wedge
+    draw.ellipse(
+        (4, 4, size - 5, size - 5),
+        fill=(13, 13, 18, 255),
+        outline=(245, 245, 247, 255),
+        width=3,
+    )
     draw.polygon(
         [
             (size * 0.28, size * 0.38),
@@ -30,7 +28,7 @@ def make_icon(size: int = 64) -> Image.Image:
             (size * 0.45, size * 0.62),
             (size * 0.28, size * 0.62),
         ],
-        fill=(242, 242, 242, 255),
+        fill=(179, 221, 255, 255),
     )
     return img
 
@@ -53,16 +51,20 @@ class DarkTrayMenu:
 
     def show(self, x: int, y: int) -> None:
         self.close()
+        p = prefs.load_prefs()
+        font = prefs.ui_font(self.root, p)
+        lang = p["lang"]
+
         popup = tk.Toplevel(self.root)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(bg=BORDER)
+        popup.configure(bg=theme.BORDER_STRONG)
         self._popup = popup
 
-        frame = tk.Frame(popup, bg=BG, highlightthickness=0)
+        frame = tk.Frame(popup, bg=theme.BG, highlightthickness=0)
         frame.pack(padx=1, pady=1)
 
-        self._item(frame, "Settings…", self._wrap(self.on_settings))
+        self._item(frame, t("settings", lang), self._wrap(self.on_settings), font)
         self._sep(frame)
 
         data = config.load_config()
@@ -70,10 +72,10 @@ class DarkTrayMenu:
             snap = data["snapshots"][key]
             label = (snap.get("name") or "").strip() or f"Slot {key}"
             text = f"[{key}]  {label}"
-            self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)))
+            self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)), font)
 
         self._sep(frame)
-        self._item(frame, "Quit", self._wrap(self.on_quit))
+        self._item(frame, t("quit", lang), self._wrap(self.on_quit), font)
 
         popup.update_idletasks()
         w = popup.winfo_reqwidth()
@@ -111,59 +113,55 @@ class DarkTrayMenu:
 
         return runner
 
-    def _item(self, parent: tk.Frame, text: str, command: Callable[[], None]) -> None:
+    def _item(self, parent: tk.Frame, text: str, command: Callable[[], None], font: tuple) -> None:
         btn = tk.Button(
             parent,
             text=text,
             anchor="w",
             command=command,
-            bg=BG,
-            fg=FG,
-            activebackground=HOVER,
-            activeforeground=FG,
+            bg=theme.BG,
+            fg=theme.TEXT,
+            activebackground=theme.SURFACE_2,
+            activeforeground=theme.ACCENT_STRONG,
             relief="flat",
             bd=0,
-            padx=12,
-            pady=6,
-            font=FONT,
-            highlightthickness=2,
-            highlightbackground=BG,
-            highlightcolor=FOCUS,
+            padx=16,
+            pady=14,
+            font=font,
+            highlightthickness=theme.FOCUS_WIDTH,
+            highlightbackground=theme.BG,
+            highlightcolor=theme.FOCUS,
             cursor="hand2",
         )
-        btn.pack(fill="x")
-        btn.bind("<Enter>", lambda _e: btn.configure(bg=HOVER))
-        btn.bind("<Leave>", lambda _e: btn.configure(bg=BG))
+        btn.pack(fill="x", ipady=4)
+        btn.bind("<Enter>", lambda _e: btn.configure(bg=theme.SURFACE_2))
+        btn.bind("<Leave>", lambda _e: btn.configure(bg=theme.BG))
 
     def _sep(self, parent: tk.Frame) -> None:
-        tk.Frame(parent, bg=BORDER, height=1).pack(fill="x", padx=8, pady=4)
+        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=8, pady=4)
 
 
 _osd_win: tk.Toplevel | None = None
 _osd_job: str | None = None
 
-NAME_FONT = ("Segoe UI", 96, "bold")
-SLOT_FONT = ("Segoe UI", 36)
-OSD_BG = "#0A0A0A"
-OSD_FG = "#FFFFFF"
-OSD_MUTED = "#C8C8C8"
-
 
 def toast(root: tk.Tk, message: str, ms: int = 2200) -> None:
+    p = prefs.load_prefs()
+    font = prefs.ui_font(root, p)
     win = tk.Toplevel(root)
     win.overrideredirect(True)
     win.attributes("-topmost", True)
-    win.configure(bg=BORDER)
-    frame = tk.Frame(win, bg=BG)
+    win.configure(bg=theme.BORDER_STRONG)
+    frame = tk.Frame(win, bg=theme.SURFACE)
     frame.pack(padx=1, pady=1)
     lbl = tk.Label(
         frame,
         text=message,
-        bg=BG,
-        fg=FG,
-        font=FONT,
-        padx=18,
-        pady=14,
+        bg=theme.SURFACE,
+        fg=theme.TEXT,
+        font=font,
+        padx=22,
+        pady=18,
         justify="left",
         wraplength=420,
     )
@@ -184,9 +182,17 @@ def show_profile_osd(
     fade_ms: int = 280,
     steps: int = 12,
 ) -> None:
-    """Large centered snapshot name with fade-in / fade-out."""
+    """Large centered snapshot name with fade-in / fade-out (no bold — size hierarchy)."""
     global _osd_win, _osd_job
     _cancel_osd(root)
+
+    p = prefs.load_prefs()
+    family = prefs.resolve_family(p["font_id"], root)
+    base = theme.FONT_SIZE_PX.get(p["font_size"], 18)
+    # Guide: no bold — use size only. OSD scales from base.
+    name_font = (family, max(64, base * 5))
+    slot_font = ("Consolas", max(28, base * 2))
+    lang = p["lang"]
 
     title = (name or "").strip() or f"Slot {slot}"
 
@@ -194,25 +200,25 @@ def show_profile_osd(
     win.overrideredirect(True)
     win.attributes("-topmost", True)
     win.attributes("-alpha", 0.0)
-    win.configure(bg=OSD_BG)
+    win.configure(bg=theme.BG)
 
-    outer = tk.Frame(win, bg=OSD_BG, padx=80, pady=56)
+    outer = tk.Frame(win, bg=theme.BG, padx=80, pady=56)
     outer.pack()
     tk.Label(
         outer,
         text=title,
-        bg=OSD_BG,
-        fg=OSD_FG,
-        font=NAME_FONT,
+        bg=theme.BG,
+        fg=theme.TEXT,
+        font=name_font,
         justify="center",
         wraplength=1200,
     ).pack()
     tk.Label(
         outer,
-        text=f"NumPad {slot}",
-        bg=OSD_BG,
-        fg=OSD_MUTED,
-        font=SLOT_FONT,
+        text=t("numpad", lang, slot=slot),
+        bg=theme.BG,
+        fg=theme.TEXT_SUB,
+        font=slot_font,
         justify="center",
     ).pack(pady=(12, 0))
 
@@ -230,6 +236,14 @@ def show_profile_osd(
         pass
 
     _osd_win = win
+    if prefers_reduced_motion():
+        try:
+            win.attributes("-alpha", 0.92)
+        except tk.TclError:
+            pass
+        _osd_job = root.after(hold_ms, lambda: _destroy_osd(win))
+        return
+
     interval = max(12, fade_ms // steps)
     peak = 0.92
 
@@ -249,8 +263,8 @@ def show_profile_osd(
             if _osd_win is not win:
                 return
             nonlocal_state["n"] += 1
-            t = nonlocal_state["n"] / steps
-            eased = t * t * (3 - 2 * t)
+            progress = nonlocal_state["n"] / steps
+            eased = progress * progress * (3 - 2 * progress)
             start = getattr(win, "_osd_alpha", 0.0)
             set_alpha(start + (to - start) * eased)
             if nonlocal_state["n"] >= steps:
