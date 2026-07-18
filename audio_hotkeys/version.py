@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.4.2"
+APP_VERSION = "1.4.3"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.4.3",
+        "2026-07-18",
+        "창 전환 표시가 Alt+Tab 전환기 자체(\"작업 전환\")를 잡아 전환기를 가리던 문제 수정. "
+        "전환기·작업표시줄·바탕화면 같은 셸 창은 무시하고 실제 목적지 창 이름만 표시한다.",
+    ),
     (
         "1.4.2",
         "2026-07-18",

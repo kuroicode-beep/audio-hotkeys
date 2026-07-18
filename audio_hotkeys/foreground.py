@@ -37,8 +37,34 @@ user32.SetWinEventHook.argtypes = (
 user32.UnhookWinEvent.argtypes = (wintypes.HANDLE,)
 user32.GetWindowTextLengthW.argtypes = (wintypes.HWND,)
 user32.GetWindowTextW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
+user32.GetClassNameW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
 user32.GetForegroundWindow.restype = wintypes.HWND
-user32.GetGUIThreadInfo = user32.GetGUIThreadInfo  # noqa: PLW0127
+
+# Shell/system windows that shouldn't count as a "switch" — most importantly the
+# Alt+Tab task switcher (XamlExplorerHostIslandWindow, titled "작업 전환"), whose
+# overlay we would otherwise cover while the user is still choosing a window.
+# Measured class name; matching by class keeps it language-independent.
+_IGNORED_CLASSES = frozenset(
+    {
+        "XamlExplorerHostIslandWindow",  # Win11 Alt+Tab / Task View
+        "MultitaskingViewFrame",         # Win10 Task View
+        "TaskSwitcherWnd",               # classic Alt+Tab
+        "TaskSwitcherOverlayWnd",
+        "ForegroundStaging",
+        "Shell_TrayWnd",                 # taskbar
+        "Shell_SecondaryTrayWnd",        # taskbar on other monitors
+        "Progman",                       # desktop
+        "WorkerW",                       # desktop wallpaper host
+    }
+)
+
+
+def _window_class(hwnd: int) -> str:
+    if not hwnd:
+        return ""
+    buf = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, buf, 256)
+    return buf.value
 
 
 def _window_title(hwnd: int) -> str:
@@ -104,6 +130,11 @@ class ForegroundWatcher:
         if id_object != OBJID_WINDOW or not hwnd:
             return
         if hwnd == self._last_hwnd:
+            return
+        # Skip the Alt+Tab switcher and other shell chrome — otherwise the OSD
+        # covers the switcher while the user is still picking a window. Don't
+        # update _last_hwnd for these, so the real target still registers.
+        if _window_class(hwnd) in _IGNORED_CLASSES:
             return
         self._last_hwnd = hwnd
         title = _window_title(hwnd)
