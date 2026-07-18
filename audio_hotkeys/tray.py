@@ -67,7 +67,12 @@ class DarkTrayMenu:
 
         screen_w = popup.winfo_screenwidth()
         screen_h = popup.winfo_screenheight()
-        max_h = screen_h - theme.px(16)
+        # An auto-hidden taskbar pops up under the cursor on right-click and
+        # would cover the bottom of the menu, so keep clear of it and prefer the
+        # top of the screen for a tall menu.
+        top_margin = theme.px(8)
+        bottom_margin = theme.px(56)  # taller than the taskbar
+        max_h = screen_h - top_margin - bottom_margin
 
         # Items live in a canvas so an over-tall menu (e.g. "큼" font size) can
         # scroll instead of running off the bottom of the screen.
@@ -123,8 +128,11 @@ class DarkTrayMenu:
         popup.update_idletasks()
         w, h = popup.winfo_reqwidth(), popup.winfo_reqheight()
         px = min(x, screen_w - w - 8)
-        py = min(y - h, screen_h - h - 8)
-        popup.geometry(f"+{max(0, px)}+{max(0, py)}")
+        # Open above the cursor, but never past the top nor into the taskbar
+        # band at the bottom. A tall menu ends up pinned to the top.
+        py = min(y - h, screen_h - bottom_margin - h)
+        py = max(top_margin, py)
+        popup.geometry(f"+{max(0, px)}+{py}")
         popup.focus_force()
         popup.bind("<Escape>", lambda _e: self.close())
         popup.bind("<FocusOut>", lambda _e: self.root.after(150, self._close_if_unfocused))

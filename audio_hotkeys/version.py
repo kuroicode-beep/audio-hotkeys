@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.4.1"
+APP_VERSION = "1.4.2"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.4.2",
+        "2026-07-18",
+        "트레이 메뉴가 자동 숨김 작업표시줄에 가려 마지막 항목(종료)이 안 보이던 문제 수정. "
+        "긴 메뉴는 화면 상단에 붙여 표시하고 하단 작업표시줄 대역을 피한다.",
+    ),
     (
         "1.4.1",
         "2026-07-18",
