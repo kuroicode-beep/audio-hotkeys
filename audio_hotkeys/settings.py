@@ -124,9 +124,17 @@ class VolumeSlider:
 
 
 class SettingsWindow:
-    def __init__(self, root: tk.Tk, on_saved: Callable[[], None] | None = None) -> None:
+    def __init__(
+        self,
+        root: tk.Tk,
+        on_saved: Callable[[], None] | None = None,
+        switch_osd_state: Callable[[], bool] | None = None,
+        on_switch_osd: Callable[[bool], None] | None = None,
+    ) -> None:
         self.root = root
         self.on_saved = on_saved
+        self.switch_osd_state = switch_osd_state
+        self.on_switch_osd = on_switch_osd
         self.data = config.load_config()
         self.prefs = prefs.load_prefs()
         self.lang = self.prefs["lang"]
@@ -142,6 +150,9 @@ class SettingsWindow:
         self.font_size_var = tk.StringVar()
         self.lang_var = tk.StringVar()
         self._font_preview_var = tk.StringVar()
+        self.switch_osd_var = tk.BooleanVar(
+            value=(switch_osd_state() if switch_osd_state else bool(self.data["ui"].get("window_switch_osd")))
+        )
 
         self.output_choices = audio.device_choices("output")
         self.input_choices = audio.device_choices("input")
@@ -402,6 +413,57 @@ class SettingsWindow:
 
         # Apply font change without full rebuild when only font/size (size triggers apply)
         box.bind("<<ComboboxSelected>>", lambda _e: self._apply_prefs(), add="+")
+
+        # 창 전환 표시 (Alt+Tab) — 트레이 메뉴 토글과 같은 상태를 공유한다.
+        if self.on_switch_osd is not None:
+            if self.switch_osd_state is not None:
+                self.switch_osd_var.set(self.switch_osd_state())
+            row4 = tk.Frame(parent, bg=theme.SURFACE)
+            row4.pack(fill="x", pady=(theme.px(8), theme.px(4)))
+            chk = tk.Checkbutton(
+                row4,
+                text=t("window_switch_osd", self.lang),
+                variable=self.switch_osd_var,
+                command=self._on_switch_osd_toggle,
+                bg=theme.SURFACE,
+                fg=theme.TEXT,
+                activebackground=theme.SURFACE,
+                activeforeground=theme.ACCENT_STRONG,
+                selectcolor=theme.SURFACE_2,
+                highlightthickness=theme.FOCUS_WIDTH,
+                highlightbackground=theme.BORDER_STRONG,
+                highlightcolor=theme.FOCUS,
+                font=font,
+                anchor="w",
+                padx=theme.px(8),
+                pady=theme.px(6),
+                cursor="hand2",
+            )
+            chk.pack(side="left", fill="x", expand=True, ipady=theme.px(6))
+            tk.Label(
+                parent,
+                text=t("window_switch_osd_hint", self.lang),
+                bg=theme.SURFACE,
+                fg=theme.TEXT_SUB,
+                font=theme.font_tuple(font[0], max(12, theme.FONT_SIZE_PX.get(self.prefs["font_size"], 18) - 3)),
+                anchor="w",
+                justify="left",
+                wraplength=theme.px(520),
+            ).pack(fill="x", pady=(0, theme.px(4)))
+
+    def _on_switch_osd_toggle(self) -> None:
+        want = bool(self.switch_osd_var.get())
+        actual = want
+        if self.on_switch_osd is not None:
+            result = self.on_switch_osd(want)
+            if isinstance(result, bool):
+                actual = result
+        # 실제 결과로 되돌려 UI를 정합화 (훅 등록 실패 등)
+        self.switch_osd_var.set(actual)
+        self._set_status(
+            t("window_switch_osd_toast", state=t("on" if actual else "off", self.lang)),
+            level="positive" if actual else "normal",
+        )
 
     def _system_body(self, parent: tk.Misc, font: tuple) -> None:
         mono = self._mono()
@@ -722,7 +784,11 @@ class SettingsWindow:
         self._set_status(t("captured_kakao", self.lang))
 
 
-def open_settings(on_saved: Callable[[], None] | None = None) -> None:
+def open_settings(
+    on_saved: Callable[[], None] | None = None,
+    switch_osd_state: Callable[[], bool] | None = None,
+    on_switch_osd: Callable[[bool], None] | None = None,
+) -> None:
     existing = getattr(open_settings, "_win", None)
     if existing is not None:
         try:
@@ -736,7 +802,7 @@ def open_settings(on_saved: Callable[[], None] | None = None) -> None:
     win = tk.Toplevel() if tk._default_root else tk.Tk()
     win.title(t("app_title"))
     apply_dark_titlebar(win)
-    SettingsWindow(win, on_saved=on_saved)
+    SettingsWindow(win, on_saved=on_saved, switch_osd_state=switch_osd_state, on_switch_osd=on_switch_osd)
     open_settings._win = win
 
     def _on_close() -> None:

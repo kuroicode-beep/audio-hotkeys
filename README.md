@@ -2,7 +2,7 @@
 
 **[웹사이트](https://kuroicode-beep.github.io/audio-hotkeys/)** · **[최신 버전 다운로드](https://github.com/kuroicode-beep/audio-hotkeys/releases/latest/download/audio-hotkeys.exe)** · [릴리스](https://github.com/kuroicode-beep/audio-hotkeys/releases)
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.4.0**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.4.1**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
@@ -62,10 +62,10 @@ Output: `dist\audio-hotkeys.exe`
 | Tray left-click | Open settings |
 | Tray right-click | Dark menu (apply slots / window-switch overlay / settings / quit) |
 
-**창 전환 표시 (v1.4.0)** — 트레이 우클릭 메뉴에서 켜면, 창을 바꿀 때마다(Alt+Tab·클릭·작업표시줄)
-화면 중앙에 새 창 이름이 큰 글씨로 잠깐 뜬다. 저시력 사용자가 "지금 어느 창인지"를 놓치지 않도록.
-Alt+Tab은 Windows 예약 키라 후킹할 수 없어, 포그라운드 창 변경(`SetWinEventHook`)을 감지한다 —
-그래서 클릭 전환에도 뜬다. 기본은 꺼짐이고, 켠 상태는 저장된다.
+**창 전환 표시 (v1.4.0)** — 트레이 우클릭 메뉴 또는 **설정 창의 화면 설정**에서 켜면, 창을 바꿀
+때마다(Alt+Tab·클릭·작업표시줄) 화면 중앙에 새 창 이름이 큰 글씨로 잠깐 뜬다. 저시력 사용자가
+"지금 어느 창인지"를 놓치지 않도록. Alt+Tab은 Windows 예약 키라 후킹할 수 없어, 포그라운드 창
+변경(`SetWinEventHook`)을 감지한다 — 그래서 클릭 전환에도 뜬다. 기본은 꺼짐이고, 켠 상태는 저장된다.
 
 **직전 슬롯 토글 (v1.3.0)** — `Ctrl+Alt+.`을 누르면 마지막으로 적용한 슬롯과 그 직전 슬롯을
 한 키로 왕복합니다 (헤드셋↔스피커 등). NumPad `.`와 메인 키보드 `.` 둘 다 동작하며, 메인 키보드

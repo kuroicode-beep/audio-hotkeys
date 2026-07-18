@@ -102,13 +102,27 @@ class App:
         self.root.after(400, self._startup_toast)
         self.root.mainloop()
 
-    def toggle_switch_osd(self) -> None:
-        on = self.switch_watcher.toggle()
+    def set_switch_osd(self, enabled: bool, *, notify: bool = True) -> bool:
+        """Single source of truth for the window-switch overlay: tray + settings.
+
+        Starts/stops the live watcher and persists the choice. Returns the
+        actual state so a caller can reflect it.
+        """
+        if enabled and not self.switch_watcher.enabled:
+            self.switch_watcher.start()
+        elif not enabled and self.switch_watcher.enabled:
+            self.switch_watcher.stop()
+        on = self.switch_watcher.enabled
         data = config.load_config()
         data["ui"]["window_switch_osd"] = on
         config.save_config(data)
-        state = t("on") if on else t("off")
-        toast(self.root, t("window_switch_osd_toast", state=state), level="positive" if on else "normal")
+        if notify:
+            state = t("on") if on else t("off")
+            toast(self.root, t("window_switch_osd_toast", state=state), level="positive" if on else "normal")
+        return on
+
+    def toggle_switch_osd(self) -> None:
+        self.set_switch_osd(not self.switch_watcher.enabled)
 
     def _startup_toast(self) -> None:
         warning = self.hotkeys.status_warning()
@@ -118,7 +132,11 @@ class App:
         toast(self.root, t("running_toast"))
 
     def open_settings(self) -> None:
-        open_settings(on_saved=lambda: toast(self.root, t("snapshots_saved")))
+        open_settings(
+            on_saved=lambda: toast(self.root, t("snapshots_saved")),
+            switch_osd_state=lambda: self.switch_watcher.enabled,
+            on_switch_osd=lambda enabled: self.set_switch_osd(enabled, notify=False),
+        )
 
     def apply_slot(self, slot: str) -> None:
         data = config.load_config()

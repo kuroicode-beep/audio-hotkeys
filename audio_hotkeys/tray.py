@@ -65,8 +65,16 @@ class DarkTrayMenu:
         popup.configure(bg=theme.BORDER_STRONG)
         self._popup = popup
 
-        frame = tk.Frame(popup, bg=theme.BG, highlightthickness=0)
-        frame.pack(padx=1, pady=1)
+        screen_w = popup.winfo_screenwidth()
+        screen_h = popup.winfo_screenheight()
+        max_h = screen_h - theme.px(16)
+
+        # Items live in a canvas so an over-tall menu (e.g. "큼" font size) can
+        # scroll instead of running off the bottom of the screen.
+        host = tk.Frame(popup, bg=theme.BG, highlightthickness=0)
+        host.pack(padx=1, pady=1)
+        canvas = tk.Canvas(host, bg=theme.BG, highlightthickness=0)
+        frame = tk.Frame(canvas, bg=theme.BG, highlightthickness=0)
 
         self._item(frame, t("settings", lang), self._wrap(self.on_settings), font)
         self._sep(frame)
@@ -88,11 +96,32 @@ class DarkTrayMenu:
             self._sep(frame)
         self._item(frame, t("quit", lang), self._wrap(self.on_quit), font)
 
+        frame.update_idletasks()
+        content_w = frame.winfo_reqwidth()
+        content_h = frame.winfo_reqheight()
+        win_id = canvas.create_window((0, 0), window=frame, anchor="nw")
+
+        if content_h <= max_h:
+            canvas.configure(width=content_w, height=content_h)
+            canvas.pack()
+        else:
+            scroll = tk.Scrollbar(
+                host, orient="vertical", command=canvas.yview,
+                troughcolor=theme.BG, bg=theme.SURFACE_2,
+                activebackground=theme.ACCENT, bd=0, width=theme.px(14),
+            )
+            canvas.configure(
+                width=content_w, height=max_h,
+                yscrollcommand=scroll.set,
+                scrollregion=(0, 0, content_w, content_h),
+            )
+            canvas.pack(side="left")
+            scroll.pack(side="right", fill="y")
+            canvas.itemconfigure(win_id, width=content_w)
+            popup.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
+
         popup.update_idletasks()
-        w = popup.winfo_reqwidth()
-        h = popup.winfo_reqheight()
-        screen_w = popup.winfo_screenwidth()
-        screen_h = popup.winfo_screenheight()
+        w, h = popup.winfo_reqwidth(), popup.winfo_reqheight()
         px = min(x, screen_w - w - 8)
         py = min(y - h, screen_h - h - 8)
         popup.geometry(f"+{max(0, px)}+{max(0, py)}")
@@ -125,6 +154,8 @@ class DarkTrayMenu:
         return runner
 
     def _item(self, parent: tk.Frame, text: str, command: Callable[[], None], font: tuple) -> None:
+        # 13개 항목(설정+슬롯10+토글+종료)이 화면 세로를 넘기지 않도록 간격을 조인다.
+        # 클릭 타겟은 컴팩트 컨트롤 최소선(≈34px 논리) 이상을 유지한다.
         btn = tk.Button(
             parent,
             text=text,
@@ -137,19 +168,19 @@ class DarkTrayMenu:
             relief="flat",
             bd=0,
             padx=theme.px(16),
-            pady=theme.px(14),
+            pady=theme.px(6),
             font=font,
             highlightthickness=theme.FOCUS_WIDTH,
             highlightbackground=theme.BG,
             highlightcolor=theme.FOCUS,
             cursor="hand2",
         )
-        btn.pack(fill="x", ipady=theme.px(4))
+        btn.pack(fill="x")
         btn.bind("<Enter>", lambda _e: btn.configure(bg=theme.SURFACE_2))
         btn.bind("<Leave>", lambda _e: btn.configure(bg=theme.BG))
 
     def _sep(self, parent: tk.Frame) -> None:
-        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=theme.px(8), pady=theme.px(4))
+        tk.Frame(parent, bg=theme.BORDER, height=1).pack(fill="x", padx=theme.px(8), pady=theme.px(2))
 
 
 _osd_win: tk.Toplevel | None = None

@@ -67,6 +67,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "off": "꺼짐",
         "window_switch_osd": "창 전환 표시",
         "window_switch_osd_toast": "창 전환 표시 {state}",
+        "window_switch_osd_hint": "창을 바꿀 때(Alt+Tab·클릭) 새 창 이름을 화면 중앙에 크게 표시합니다.",
     },
     "en": {
         "app_title": "audio-hotkeys — Snapshots",
@@ -130,6 +131,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "off": "off",
         "window_switch_osd": "Window-switch overlay",
         "window_switch_osd_toast": "Window-switch overlay {state}",
+        "window_switch_osd_hint": "Shows the new window's name center-screen on switch (Alt+Tab, click).",
     },
     "ja": {
         "app_title": "audio-hotkeys — スナップショット",
@@ -193,6 +195,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "off": "オフ",
         "window_switch_osd": "ウィンドウ切替表示",
         "window_switch_osd_toast": "ウィンドウ切替表示 {state}",
+        "window_switch_osd_hint": "ウィンドウ切替時(Alt+Tab・クリック)に新しい名前を画面中央に大きく表示します。",
     },
     "zh": {
         "app_title": "audio-hotkeys — 快照",
@@ -256,6 +259,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "off": "关",
         "window_switch_osd": "窗口切换提示",
         "window_switch_osd_toast": "窗口切换提示 {state}",
+        "window_switch_osd_hint": "切换窗口时（Alt+Tab、点击）在屏幕中央大字显示新窗口名称。",
     },
     "vi": {
         "app_title": "audio-hotkeys — Ảnh chụp",
@@ -319,6 +323,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "off": "tắt",
         "window_switch_osd": "Hiển thị chuyển cửa sổ",
         "window_switch_osd_toast": "Hiển thị chuyển cửa sổ {state}",
+        "window_switch_osd_hint": "Hiển thị tên cửa sổ mới ở giữa màn hình khi chuyển (Alt+Tab, nhấp).",
     },
 }
 
