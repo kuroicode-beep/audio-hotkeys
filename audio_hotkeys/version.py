@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.4.3"
+APP_VERSION = "1.4.4"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.4.4",
+        "2026-07-19",
+        "창 전환 표시(Alt+Tab 창 이름 OSD) 기능을 제거했다. "
+        "트레이·설정의 토글과 관련 설정 항목도 함께 정리했다.",
+    ),
     (
         "1.4.3",
         "2026-07-18",
