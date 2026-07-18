@@ -24,6 +24,7 @@ audio-hotkeys.spec`을 직접 실행할 것. (백로그: 스크립트 자체 보
 | 모듈 | 역할 |
 |---|---|
 | `hotkeys.py` | Win32 `RegisterHotKey` + 메시지 루프 스레드. id 범위로 구분: 적용 1–10 / 저장 11–20 / 토글 21–22 |
+| `foreground.py` | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`로 창 전환 감지 (Alt+Tab은 후킹 불가). `ForegroundWatcher` |
 | `audio.py` | 장치 열거·볼륨(pycaw), PolicyConfig COM 기본 장치 전환, `resolve_device()`, `ApplyResult` |
 | `kakao.py` | KakaoTalk 전용 라우팅 (번들 `tools/svcl/svcl.exe`) |
 | `config.py` | 스냅샷 10개 + `ui` 섹션. 필드는 `ID_FIELDS`/`NAME_FIELDS`/`VOLUME_FIELDS` 상수로 관리 |
@@ -55,6 +56,10 @@ audio-hotkeys.spec`을 직접 실행할 것. (백로그: 스크립트 자체 보
 - **NumLock이 꺼지면 NumPad 단축키는 아예 안 뜬다.** 다른 VK가 오기 때문. `numlock_on()`으로
   감지해 알린다. 비-NumLock VK(VK_END 등)를 대신 등록하지 말 것 — Ctrl+Alt+화살표 같은 조합을
   가로챈다. `Ctrl+Alt+.`은 메인 키보드 `.`(VK_OEM_PERIOD)도 등록해서 NumLock과 무관하게 동작.
+- **Alt+Tab은 `RegisterHotKey`로 못 잡는다.** Windows 예약 키라 잡으면 전환 자체가 깨진다.
+  창 전환 감지는 `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`(`foreground.py`)로 한다 — 이건
+  Alt+Tab뿐 아니라 클릭·작업표시줄 전환에도 발생한다. 훅 콜백(`_HOOKPROC`) 객체 참조를 인스턴스에
+  붙들어 둘 것. GC되면 콜백 도중 크래시난다.
 - **DPI**: `theme.enable_dpi_awareness()`를 **첫 Tk 창 생성 전에** 호출하고
   `theme.init_scale(root)`로 배율을 고정한다. 크기는 논리 px로 적고 `theme.px()`로 환산.
   안 하면 고DPI에서 Windows가 비트맵 확대해 텍스트가 흐려진다(저시력 접근성 직격).

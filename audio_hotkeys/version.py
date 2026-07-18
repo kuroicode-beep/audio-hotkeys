@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.4.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.4.0",
+        "2026-07-18",
+        "창을 전환하면(Alt+Tab·클릭·작업표시줄) 화면 중앙에 새 창 이름을 큰 글씨로 표시. "
+        "트레이 메뉴에서 켜고 끄며(기본 꺼짐), 설정은 저장된다.",
+    ),
     (
         "1.3.1",
         "2026-07-16",

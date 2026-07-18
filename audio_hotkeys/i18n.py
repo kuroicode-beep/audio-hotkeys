@@ -63,6 +63,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_no_kakao": "카카오톡 미실행 — 기존 값 유지",
         "hotkeys_toggle": "직전 슬롯과 토글: Ctrl+Alt+.",
         "no_previous_slot": "돌아갈 직전 슬롯이 없습니다.\n슬롯을 두 개 이상 적용한 뒤 사용하세요.",
+        "on": "켜짐",
+        "off": "꺼짐",
+        "window_switch_osd": "창 전환 표시",
+        "window_switch_osd_toast": "창 전환 표시 {state}",
     },
     "en": {
         "app_title": "audio-hotkeys — Snapshots",
@@ -122,6 +126,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_no_kakao": "KakaoTalk not running — kept previous values",
         "hotkeys_toggle": "Toggle previous slot: Ctrl+Alt+.",
         "no_previous_slot": "No previous slot to go back to.\nApply two different slots first.",
+        "on": "on",
+        "off": "off",
+        "window_switch_osd": "Window-switch overlay",
+        "window_switch_osd_toast": "Window-switch overlay {state}",
     },
     "ja": {
         "app_title": "audio-hotkeys — スナップショット",
@@ -181,6 +189,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_no_kakao": "カカオトーク未起動 — 既存値を維持",
         "hotkeys_toggle": "直前のスロットと切替: Ctrl+Alt+.",
         "no_previous_slot": "戻れる直前のスロットがありません。\n先に2つ以上のスロットを適用してください。",
+        "on": "オン",
+        "off": "オフ",
+        "window_switch_osd": "ウィンドウ切替表示",
+        "window_switch_osd_toast": "ウィンドウ切替表示 {state}",
     },
     "zh": {
         "app_title": "audio-hotkeys — 快照",
@@ -240,6 +252,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_no_kakao": "KakaoTalk 未运行 — 保留原值",
         "hotkeys_toggle": "切换上一个插槽: Ctrl+Alt+.",
         "no_previous_slot": "没有可返回的上一个插槽。\n请先应用两个不同的插槽。",
+        "on": "开",
+        "off": "关",
+        "window_switch_osd": "窗口切换提示",
+        "window_switch_osd_toast": "窗口切换提示 {state}",
     },
     "vi": {
         "app_title": "audio-hotkeys — Ảnh chụp",
@@ -299,6 +315,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_no_kakao": "KakaoTalk không chạy — giữ giá trị cũ",
         "hotkeys_toggle": "Chuyển về khe trước: Ctrl+Alt+.",
         "no_previous_slot": "Không có khe trước để quay lại.\nHãy áp dụng hai khe khác nhau trước.",
+        "on": "bật",
+        "off": "tắt",
+        "window_switch_osd": "Hiển thị chuyển cửa sổ",
+        "window_switch_osd_toast": "Hiển thị chuyển cửa sổ {state}",
     },
 }
 

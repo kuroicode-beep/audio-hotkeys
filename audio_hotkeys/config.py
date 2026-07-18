@@ -47,6 +47,7 @@ def default_config() -> dict[str, Any]:
             "font_id": "kyobo-handwriting-2019",
             "font_size": "M",
             "lang": "ko",
+            "window_switch_osd": False,
         },
     }
 
@@ -98,6 +99,8 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
         for key in ("font_id", "font_size", "lang"):
             if ui.get(key):
                 merged[key] = str(ui[key])
+        if "window_switch_osd" in ui:
+            merged["window_switch_osd"] = bool(ui["window_switch_osd"])
         base["ui"] = merged
     return base
 
