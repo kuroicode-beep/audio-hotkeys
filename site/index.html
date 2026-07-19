@@ -149,6 +149,23 @@
   .link-card span { color: var(--text-sub); font-size: 0.9rem; overflow-wrap: anywhere; }
   .link-card:hover span { color: var(--text-sub); }
 
+  /* ---- support / 후원 ---- */
+  .support-card {
+    display: flex; gap: 26px; align-items: center; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+  }
+  /* QR은 밝은 바탕이라야 스캔이 잘 된다 — 흰 프레임을 직접 씌운다. */
+  .qr-frame { background: #fff; border-radius: 12px; padding: 14px; flex: none; line-height: 0; }
+  .qr-frame img { display: block; width: 216px; height: 216px; }
+  .qr-meta { display: flex; flex-direction: column; gap: 6px; min-width: 220px; flex: 1; }
+  .qr-meta b { font-weight: normal; font-size: 1.25rem; color: var(--accent-strong); }
+  .qr-meta span { color: var(--text-sub); font-size: 0.97rem; }
+  @media (max-width: 560px) {
+    .support-card { justify-content: center; text-align: center; }
+    .qr-meta { align-items: center; }
+  }
+
   footer {
     border-top: 1px solid var(--border); padding: 32px 0 48px;
     color: var(--text-sub); font-size: 0.9rem; text-align: center;
@@ -173,7 +190,7 @@
         <path d="M18 24h11l11-8v32l-11-8H18z" fill="#b3ddff"/>
       </svg>
       <b>audio-hotkeys</b>
-      <span class="ver">v1.3.1</span>
+      <span class="ver">v1.4.4</span>
     </div>
     <nav class="langs" aria-label="Language">
       <button type="button" data-lang="en" lang="en">English</button>
@@ -276,6 +293,22 @@
       </div>
     </div>
   </section>
+
+  <section id="support">
+    <div class="wrap">
+      <h2 data-i18n="support_title"></h2>
+      <p class="sub" data-i18n="support_sub"></p>
+      <div class="support-card">
+        <div class="qr-frame">
+          <img src="assets/toss-qr.png" alt="토스 후원 QR — Toss donation QR" width="216" height="216" loading="lazy">
+        </div>
+        <div class="qr-meta">
+          <b data-i18n="support_toss_label"></b>
+          <span data-i18n="support_toss_hint"></span>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -324,6 +357,10 @@ const I18N = {
     link_blog: "SVIL blog",
     link_blog_sub: "Notes on the tools and the building of them",
     link_contact: "Contact us",
+    support_title: "Support",
+    support_sub: "If this saved you some clicks, you can leave a small tip. Entirely optional — the app stays free either way.",
+    support_toss_label: "Tip via Toss",
+    support_toss_hint: "Scan the QR with the Toss app (Korea) to send a tip.",
     footer_lic: "Released under the MIT License.",
     footer_by: "Built by SVIL — Singularity Visual Intelligence Lab."
   },
@@ -364,6 +401,10 @@ const I18N = {
     link_blog: "SVIL 블로그",
     link_blog_sub: "도구와 그것을 만든 과정에 대한 기록",
     link_contact: "문의하기",
+    support_title: "후원",
+    support_sub: "이 앱이 도움이 되셨다면 작은 후원으로 응원해 주세요. 전적으로 선택이고, 후원과 무관하게 앱은 계속 무료예요.",
+    support_toss_label: "토스로 후원",
+    support_toss_hint: "토스 앱으로 QR을 스캔하면 바로 후원할 수 있어요.",
     footer_lic: "MIT 라이선스로 배포됩니다.",
     footer_by: "SVIL — Singularity Visual Intelligence Lab 제작."
   },
@@ -404,6 +445,10 @@ const I18N = {
     link_blog: "SVIL ブログ",
     link_blog_sub: "ツールとその制作過程についての記録",
     link_contact: "お問い合わせ",
+    support_title: "支援",
+    support_sub: "このアプリが役に立ったら、少額のチップで応援できます。もちろん任意で、支援に関係なくアプリは無料のままです。",
+    support_toss_label: "Toss で支援",
+    support_toss_hint: "Toss アプリ（韓国）で QR をスキャンして支援できます。",
     footer_lic: "MIT ライセンスで公開しています。",
     footer_by: "SVIL — Singularity Visual Intelligence Lab 制作。"
   },
@@ -444,6 +489,10 @@ const I18N = {
     link_blog: "SVIL 博客",
     link_blog_sub: "关于这些工具以及制作过程的记录",
     link_contact: "联系我们",
+    support_title: "赞助",
+    support_sub: "如果这个应用帮到了你，可以留个小费支持一下。完全自愿，无论是否赞助，应用都会一直免费。",
+    support_toss_label: "用 Toss 赞助",
+    support_toss_hint: "用 Toss 应用（韩国）扫描二维码即可赞助。",
     footer_lic: "以 MIT 许可证发布。",
     footer_by: "由 SVIL — Singularity Visual Intelligence Lab 制作。"
   },
@@ -484,6 +533,10 @@ const I18N = {
     link_blog: "Blog SVIL",
     link_blog_sub: "Ghi chép về các công cụ và quá trình làm ra chúng",
     link_contact: "Liên hệ",
+    support_title: "Ủng hộ",
+    support_sub: "Nếu ứng dụng này giúp ích cho bạn, bạn có thể gửi một khoản tip nhỏ. Hoàn toàn tùy ý — ứng dụng vẫn miễn phí dù bạn có ủng hộ hay không.",
+    support_toss_label: "Ủng hộ qua Toss",
+    support_toss_hint: "Quét mã QR bằng ứng dụng Toss (Hàn Quốc) để gửi ủng hộ.",
     footer_lic: "Phát hành theo giấy phép MIT.",
     footer_by: "Được xây dựng bởi SVIL — Singularity Visual Intelligence Lab."
   }
