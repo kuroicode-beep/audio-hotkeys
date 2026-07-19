@@ -11,11 +11,10 @@ import pystray
 from pystray._win32 import Icon as WinIcon
 
 from . import audio, config, kakao, theme
-from .foreground import ForegroundWatcher
 from .hotkeys import HotkeyService
 from .i18n import t
 from .settings import open_settings
-from .tray import DarkTrayMenu, make_icon, show_profile_osd, show_switch_osd, toast
+from .tray import DarkTrayMenu, make_icon, show_profile_osd, toast
 from .version import APP_VERSION
 from .win_shell import force_app_dark_mode
 
@@ -52,19 +51,11 @@ class App:
         self.root.withdraw()
         self.root.title(f"audio-hotkeys v{APP_VERSION}")
 
-        # Alt+Tab / foreground-change window-name OSD (opt-in, remembered).
-        self.switch_watcher = ForegroundWatcher(
-            on_switch=lambda title: self.root.after(0, lambda x=title: show_switch_osd(self.root, x)),
-            on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
-        )
-
         self.menu = DarkTrayMenu(
             self.root,
             on_settings=self.open_settings,
             on_apply=self.apply_slot,
             on_quit=self.quit,
-            on_toggle_switch_osd=self.toggle_switch_osd,
-            switch_osd_state=lambda: self.switch_watcher.enabled,
         )
 
         self.icon = DarkIcon(
@@ -95,34 +86,9 @@ class App:
         except Exception as exc:  # noqa: BLE001
             toast(self.root, t("hotkey_failed", error=exc), level="error")
 
-        if config.load_config()["ui"].get("window_switch_osd"):
-            self.switch_watcher.start()
-
         self.icon.run_detached()
         self.root.after(400, self._startup_toast)
         self.root.mainloop()
-
-    def set_switch_osd(self, enabled: bool, *, notify: bool = True) -> bool:
-        """Single source of truth for the window-switch overlay: tray + settings.
-
-        Starts/stops the live watcher and persists the choice. Returns the
-        actual state so a caller can reflect it.
-        """
-        if enabled and not self.switch_watcher.enabled:
-            self.switch_watcher.start()
-        elif not enabled and self.switch_watcher.enabled:
-            self.switch_watcher.stop()
-        on = self.switch_watcher.enabled
-        data = config.load_config()
-        data["ui"]["window_switch_osd"] = on
-        config.save_config(data)
-        if notify:
-            state = t("on") if on else t("off")
-            toast(self.root, t("window_switch_osd_toast", state=state), level="positive" if on else "normal")
-        return on
-
-    def toggle_switch_osd(self) -> None:
-        self.set_switch_osd(not self.switch_watcher.enabled)
 
     def _startup_toast(self) -> None:
         warning = self.hotkeys.status_warning()
@@ -132,11 +98,7 @@ class App:
         toast(self.root, t("running_toast"))
 
     def open_settings(self) -> None:
-        open_settings(
-            on_saved=lambda: toast(self.root, t("snapshots_saved")),
-            switch_osd_state=lambda: self.switch_watcher.enabled,
-            on_switch_osd=lambda enabled: self.set_switch_osd(enabled, notify=False),
-        )
+        open_settings(on_saved=lambda: toast(self.root, t("snapshots_saved")))
 
     def apply_slot(self, slot: str) -> None:
         data = config.load_config()
@@ -205,10 +167,6 @@ class App:
     def quit(self) -> None:
         try:
             self.hotkeys.stop()
-        except Exception:
-            pass
-        try:
-            self.switch_watcher.stop()
         except Exception:
             pass
         try:

@@ -60,6 +60,10 @@ audio-hotkeys.spec`을 직접 실행할 것. (백로그: 스크립트 자체 보
   창 전환 감지는 `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`(`foreground.py`)로 한다 — 이건
   Alt+Tab뿐 아니라 클릭·작업표시줄 전환에도 발생한다. 훅 콜백(`_HOOKPROC`) 객체 참조를 인스턴스에
   붙들어 둘 것. GC되면 콜백 도중 크래시난다.
+- **포그라운드 이벤트는 셸 창도 잡는다.** Alt+Tab 전환기 자체가 `XamlExplorerHostIslandWindow`
+  클래스(제목 "작업 전환")로 포그라운드가 되므로, 걸러내지 않으면 OSD가 전환기를 가려 창을 못 고른다.
+  작업표시줄(`Shell_TrayWnd`)·바탕화면(`Progman`/`WorkerW`)도 마찬가지. `foreground._IGNORED_CLASSES`로
+  **클래스 기준**(언어 무관) 필터링한다. 실제 목적지 창은 다른 클래스라 여전히 잡힌다.
 - **DPI**: `theme.enable_dpi_awareness()`를 **첫 Tk 창 생성 전에** 호출하고
   `theme.init_scale(root)`로 배율을 고정한다. 크기는 논리 px로 적고 `theme.px()`로 환산.
   안 하면 고DPI에서 Windows가 비트맵 확대해 텍스트가 흐려진다(저시력 접근성 직격).

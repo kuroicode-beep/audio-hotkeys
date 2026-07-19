@@ -42,15 +42,11 @@ class DarkTrayMenu:
         on_settings: Callable[[], None],
         on_apply: Callable[[str], None],
         on_quit: Callable[[], None],
-        on_toggle_switch_osd: Callable[[], None] | None = None,
-        switch_osd_state: Callable[[], bool] | None = None,
     ) -> None:
         self.root = root
         self.on_settings = on_settings
         self.on_apply = on_apply
         self.on_quit = on_quit
-        self.on_toggle_switch_osd = on_toggle_switch_osd
-        self.switch_osd_state = switch_osd_state
         self._popup: tk.Toplevel | None = None
 
     def show(self, x: int, y: int) -> None:
@@ -67,7 +63,12 @@ class DarkTrayMenu:
 
         screen_w = popup.winfo_screenwidth()
         screen_h = popup.winfo_screenheight()
-        max_h = screen_h - theme.px(16)
+        # An auto-hidden taskbar pops up under the cursor on right-click and
+        # would cover the bottom of the menu, so keep clear of it and prefer the
+        # top of the screen for a tall menu.
+        top_margin = theme.px(8)
+        bottom_margin = theme.px(56)  # taller than the taskbar
+        max_h = screen_h - top_margin - bottom_margin
 
         # Items live in a canvas so an over-tall menu (e.g. "큼" font size) can
         # scroll instead of running off the bottom of the screen.
@@ -87,13 +88,6 @@ class DarkTrayMenu:
             self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)), font)
 
         self._sep(frame)
-        if self.on_toggle_switch_osd is not None:
-            on = self.switch_osd_state() if self.switch_osd_state else False
-            mark = "✓" if on else "○"  # 색만이 아니라 기호 + 상태 텍스트 병행
-            state = t("on", lang) if on else t("off", lang)
-            label = f"{mark}  {t('window_switch_osd', lang)}: {state}"
-            self._item(frame, label, self._wrap(self.on_toggle_switch_osd), font)
-            self._sep(frame)
         self._item(frame, t("quit", lang), self._wrap(self.on_quit), font)
 
         frame.update_idletasks()
@@ -123,8 +117,11 @@ class DarkTrayMenu:
         popup.update_idletasks()
         w, h = popup.winfo_reqwidth(), popup.winfo_reqheight()
         px = min(x, screen_w - w - 8)
-        py = min(y - h, screen_h - h - 8)
-        popup.geometry(f"+{max(0, px)}+{max(0, py)}")
+        # Open above the cursor, but never past the top nor into the taskbar
+        # band at the bottom. A tall menu ends up pinned to the top.
+        py = min(y - h, screen_h - bottom_margin - h)
+        py = max(top_margin, py)
+        popup.geometry(f"+{max(0, px)}+{py}")
         popup.focus_force()
         popup.bind("<Escape>", lambda _e: self.close())
         popup.bind("<FocusOut>", lambda _e: self.root.after(150, self._close_if_unfocused))
@@ -400,89 +397,3 @@ def _cancel_osd(root: tk.Tk) -> None:
 
 def run_on_ui(root: tk.Tk, fn: Callable[[], None]) -> None:
     root.after(0, fn)
-
-
-# --- window-switch OSD (Alt+Tab) ------------------------------------------
-# Its own window/job so a rapid switch never fights the profile OSD.
-_switch_win: tk.Toplevel | None = None
-_switch_job: str | None = None
-
-
-def show_switch_osd(root: tk.Tk, title: str, *, hold_ms: int = 900) -> None:
-    """Large centered window name on foreground change.
-
-    Kept deliberately quick and light — it fires on every switch, so it must
-    never linger or block. Fades are skipped (reduced-motion friendly by
-    default); the point is a glance, not an animation.
-    """
-    global _switch_win, _switch_job
-    _cancel_switch(root)
-
-    text = (title or "").strip()
-    if not text:
-        return
-
-    p = prefs.load_prefs()
-    family = prefs.resolve_family(p["font_id"], root)
-    base = theme.FONT_SIZE_PX.get(p["font_size"], 18)
-    name_font = theme.font_tuple(family, max(52, base * 4))
-
-    win = tk.Toplevel(root)
-    win.overrideredirect(True)
-    win.attributes("-topmost", True)
-    try:
-        win.attributes("-alpha", 0.94)
-    except tk.TclError:
-        pass
-    win.configure(bg=theme.BORDER_STRONG)
-
-    outer = tk.Frame(win, bg=theme.BG, padx=theme.px(64), pady=theme.px(40))
-    outer.pack(padx=theme.px(2), pady=theme.px(2))
-    tk.Label(
-        outer,
-        text=text,
-        bg=theme.BG,
-        fg=theme.ACCENT_STRONG,
-        font=name_font,
-        justify="center",
-        wraplength=theme.px(1100),
-    ).pack()
-
-    win.update_idletasks()
-    sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
-    ww, wh = win.winfo_reqwidth(), win.winfo_reqheight()
-    win.geometry(f"{ww}x{wh}+{max(0, (sw - ww) // 2)}+{max(0, (sh - wh) // 2)}")
-    try:
-        win.lift()
-    except tk.TclError:
-        pass
-
-    _switch_win = win
-    _switch_job = root.after(hold_ms, lambda: _destroy_switch(win))
-
-
-def _destroy_switch(win: tk.Toplevel) -> None:
-    global _switch_win, _switch_job
-    if _switch_win is win:
-        _switch_win = None
-    _switch_job = None
-    try:
-        win.destroy()
-    except tk.TclError:
-        pass
-
-
-def _cancel_switch(root: tk.Tk) -> None:
-    global _switch_win, _switch_job
-    if _switch_job is not None:
-        try:
-            root.after_cancel(_switch_job)
-        except Exception:  # noqa: BLE001
-            pass
-        _switch_job = None
-    if _switch_win is not None:
-        try:
-            _switch_win.destroy()
-        except tk.TclError:
-            pass
-        _switch_win = None
