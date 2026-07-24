@@ -170,6 +170,11 @@
     border-top: 1px solid var(--border); padding: 32px 0 48px;
     color: var(--text-sub); font-size: 0.9rem; text-align: center;
   }
+  /* 표준 푸터 링크 — 협업 문의·블로그·홈페이지(SVIL 공통 상수). 라벨만 번역, 값은 고정. */
+  .foot-links { display: flex; flex-direction: column; gap: 8px; align-items: center; margin: 0 0 20px; }
+  .foot-links .row { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; justify-content: center; }
+  .foot-links .k { color: var(--text-sub); font-size: 0.85rem; min-width: 84px; text-align: right; }
+  @media (max-width: 560px) { .foot-links .k { min-width: 0; text-align: center; } }
 
   @media (max-width: 640px) {
     body { font-size: 17px; }
@@ -282,13 +287,13 @@
           <b data-i18n="link_gh"></b>
           <span class="mono">kuroicode-beep/audio-hotkeys</span>
         </a>
-        <a class="link-card" href="https://ghost-production-0ec2.up.railway.app">
+        <a class="link-card" href="https://ghost-production-0ec2.up.railway.app/">
           <b data-i18n="link_blog"></b>
           <span data-i18n="link_blog_sub"></span>
         </a>
-        <a class="link-card" href="mailto:svil.admin@gmail.com">
+        <a class="link-card" href="mailto:kuroicode@gmail.com">
           <b data-i18n="link_contact"></b>
-          <span class="mono">svil.admin@gmail.com</span>
+          <span class="mono">kuroicode@gmail.com</span>
         </a>
       </div>
     </div>
@@ -313,6 +318,12 @@
 
 <footer>
   <div class="wrap">
+    <!-- 표준 SVIL 푸터 링크. 값(이메일·블로그·홈페이지)은 SVIL 공통 상수이므로 그대로 둔다. -->
+    <div class="foot-links">
+      <div class="row"><span class="k" data-i18n="foot_contact"></span><a href="mailto:kuroicode@gmail.com">kuroicode@gmail.com</a></div>
+      <div class="row"><span class="k" data-i18n="foot_blog"></span><a href="https://ghost-production-0ec2.up.railway.app/" target="_blank" rel="noopener">인블루의 로그 보관소</a></div>
+      <div class="row"><span class="k" data-i18n="foot_home"></span><a href="https://kuroicode-beep.github.io/svil-homepage/" target="_blank" rel="noopener">SVIL</a></div>
+    </div>
     <p data-i18n="footer_lic"></p>
     <p data-i18n="footer_by"></p>
   </div>
@@ -361,6 +372,7 @@ const I18N = {
     support_sub: "If this saved you some clicks, you can leave a small tip. Entirely optional — the app stays free either way.",
     support_toss_label: "Tip via Toss",
     support_toss_hint: "Scan the QR with the Toss app (Korea) to send a tip.",
+    foot_contact: "Contact", foot_blog: "Blog", foot_home: "Homepage",
     footer_lic: "Released under the MIT License.",
     footer_by: "Built by SVIL — Singularity Visual Intelligence Lab."
   },
@@ -405,6 +417,7 @@ const I18N = {
     support_sub: "이 앱이 도움이 되셨다면 작은 후원으로 응원해 주세요. 전적으로 선택이고, 후원과 무관하게 앱은 계속 무료예요.",
     support_toss_label: "토스로 후원",
     support_toss_hint: "토스 앱으로 QR을 스캔하면 바로 후원할 수 있어요.",
+    foot_contact: "협업 문의", foot_blog: "블로그", foot_home: "홈페이지",
     footer_lic: "MIT 라이선스로 배포됩니다.",
     footer_by: "SVIL — Singularity Visual Intelligence Lab 제작."
   },
@@ -449,6 +462,7 @@ const I18N = {
     support_sub: "このアプリが役に立ったら、少額のチップで応援できます。もちろん任意で、支援に関係なくアプリは無料のままです。",
     support_toss_label: "Toss で支援",
     support_toss_hint: "Toss アプリ（韓国）で QR をスキャンして支援できます。",
+    foot_contact: "お問い合わせ", foot_blog: "ブログ", foot_home: "ホームページ",
     footer_lic: "MIT ライセンスで公開しています。",
     footer_by: "SVIL — Singularity Visual Intelligence Lab 制作。"
   },
@@ -493,6 +507,7 @@ const I18N = {
     support_sub: "如果这个应用帮到了你，可以留个小费支持一下。完全自愿，无论是否赞助，应用都会一直免费。",
     support_toss_label: "用 Toss 赞助",
     support_toss_hint: "用 Toss 应用（韩国）扫描二维码即可赞助。",
+    foot_contact: "合作咨询", foot_blog: "博客", foot_home: "主页",
     footer_lic: "以 MIT 许可证发布。",
     footer_by: "由 SVIL — Singularity Visual Intelligence Lab 制作。"
   },
@@ -537,6 +552,7 @@ const I18N = {
     support_sub: "Nếu ứng dụng này giúp ích cho bạn, bạn có thể gửi một khoản tip nhỏ. Hoàn toàn tùy ý — ứng dụng vẫn miễn phí dù bạn có ủng hộ hay không.",
     support_toss_label: "Ủng hộ qua Toss",
     support_toss_hint: "Quét mã QR bằng ứng dụng Toss (Hàn Quốc) để gửi ủng hộ.",
+    foot_contact: "Liên hệ", foot_blog: "Blog", foot_home: "Trang chủ",
     footer_lic: "Phát hành theo giấy phép MIT.",
     footer_by: "Được xây dựng bởi SVIL — Singularity Visual Intelligence Lab."
   }
@@ -547,9 +563,9 @@ const LANGS = ["en", "ko", "ja", "zh", "vi"];
 function applyLang(code) {
   const dict = I18N[code] || I18N.en;
   document.documentElement.lang = code;
-  document.title = dict._title;
+  document.title = dict._title || I18N.en._title;
   document.querySelectorAll("[data-i18n]").forEach(el => {
-    const val = dict[el.dataset.i18n];
+    const val = dict[el.dataset.i18n] ?? I18N.en[el.dataset.i18n];   // 누락 키는 영어로 폴백
     if (val) el.textContent = val;
   });
   document.querySelectorAll(".langs button").forEach(b => {
