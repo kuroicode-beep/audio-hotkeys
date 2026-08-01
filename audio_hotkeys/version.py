@@ -2,10 +2,17 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.4.4"
+APP_VERSION = "1.4.5"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.4.5",
+        "2026-08-01",
+        "저장 단축키(Ctrl+Alt+Shift+NumPad)가 실제 키보드에서 동작하지 않던 문제 수정. "
+        "Windows가 Shift+NumPad에서 Shift를 임시 해제하는 동작 때문에 단축키가 발화되지 않았다. "
+        "이제 저장 시 '✓ 저장됨' 오버레이와 완료 알림이 정상 표시된다.",
+    ),
     (
         "1.4.4",
         "2026-07-19",

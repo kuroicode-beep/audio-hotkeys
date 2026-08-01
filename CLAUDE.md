@@ -56,6 +56,13 @@ audio-hotkeys.spec`을 직접 실행할 것. (백로그: 스크립트 자체 보
 - **NumLock이 꺼지면 NumPad 단축키는 아예 안 뜬다.** 다른 VK가 오기 때문. `numlock_on()`으로
   감지해 알린다. 비-NumLock VK(VK_END 등)를 대신 등록하지 말 것 — Ctrl+Alt+화살표 같은 조합을
   가로챈다. `Ctrl+Alt+.`은 메인 키보드 `.`(VK_OEM_PERIOD)도 등록해서 NumLock과 무관하게 동작.
+- **Shift+NumPad는 `RegisterHotKey`로 못 잡는다.** NumLock 상태와 무관하게 키보드 드라이버가
+  Shift를 가짜로 해제하고 키의 NumLock 의미를 뒤집는다(NumLock 켜짐 + Shift+NumPad8 → Shift 없이
+  VK_UP). `MOD_SHIFT|VK_NUMPAD*` 등록은 실물 키보드와 절대 매칭되지 않는다 — 합성 `keybd_event`
+  (VK 직접 주입)는 드라이버를 우회해서 테스트만 통과하니 속지 말 것. 저장 단축키는
+  `WH_KEYBOARD_LL` 훅으로 잡는다: 스캔코드(0x47–0x52, extended 아님)로 물리 NumPad를 식별하고,
+  "digit VK ↔ NumLock 불일치 = Shift가 실제로 눌림" 규칙으로 가짜 해제를 판별한다 (`hotkeys.py`
+  `_save_combo_down`).
 - **Alt+Tab은 `RegisterHotKey`로 못 잡는다.** Windows 예약 키라 잡으면 전환 자체가 깨진다.
   창 전환 감지는 `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`(`foreground.py`)로 한다 — 이건
   Alt+Tab뿐 아니라 클릭·작업표시줄 전환에도 발생한다. 훅 콜백(`_HOOKPROC`) 객체 참조를 인스턴스에
