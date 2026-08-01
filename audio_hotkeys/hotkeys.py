@@ -28,13 +28,53 @@ MOD_SHIFT = 0x0004
 MOD_NOREPEAT = 0x4000
 WM_HOTKEY = 0x0312
 WM_QUIT = 0x0012
+WM_KEYDOWN = 0x0100
+WM_KEYUP = 0x0101
+WM_SYSKEYDOWN = 0x0104
+WM_SYSKEYUP = 0x0105
+VK_SHIFT = 0x10
+VK_CONTROL = 0x11
+VK_MENU = 0x12
 VK_NUMLOCK = 0x90
+
+WH_KEYBOARD_LL = 13
+LLKHF_EXTENDED = 0x01
 
 ERROR_HOTKEY_ALREADY_REGISTERED = 1409
 
 VK_NUMPAD = {i: 0x60 + i for i in range(10)}
 VK_DECIMAL = 0x6E  # NumPad "." — needs NumLock, like the digits
 VK_OEM_PERIOD = 0xBE  # main-keyboard "." — works with NumLock off
+
+# Physical NumPad digit scan codes. NumLock/Shift never change these, and the
+# extended flag is what separates them from the main-keyboard nav cluster.
+SC_NUMPAD = {
+    0x52: 0, 0x4F: 1, 0x50: 2, 0x51: 3, 0x4B: 4,
+    0x4C: 5, 0x4D: 6, 0x47: 7, 0x48: 8, 0x49: 9,
+}
+
+
+class KBDLLHOOKSTRUCT(ctypes.Structure):
+    _fields_ = (
+        ("vkCode", wintypes.DWORD),
+        ("scanCode", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    )
+
+
+_HOOKPROC = ctypes.WINFUNCTYPE(wintypes.LPARAM, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+user32.SetWindowsHookExW.argtypes = (ctypes.c_int, _HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD)
+user32.SetWindowsHookExW.restype = wintypes.HHOOK
+user32.UnhookWindowsHookEx.argtypes = (wintypes.HHOOK,)
+user32.UnhookWindowsHookEx.restype = wintypes.BOOL
+user32.CallNextHookEx.argtypes = (wintypes.HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+user32.CallNextHookEx.restype = wintypes.LPARAM
+user32.GetAsyncKeyState.argtypes = (ctypes.c_int,)
+user32.GetAsyncKeyState.restype = ctypes.c_short
+kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
+kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 
 # Ctrl+Alt+NumPad N applies slot N; adding Shift saves the live audio state
 # into slot N; Ctrl+Alt+"." toggles back to the previously applied slot.
@@ -71,10 +111,19 @@ class HotkeyService:
         self._thread: threading.Thread | None = None
         self._thread_id = 0
         self._ready = threading.Event()
+        self._hook: int | None = None
+        # The callback ref must live on the instance — if it gets GC'd the
+        # process crashes inside the hook dispatch (same trap as foreground.py).
+        self._hook_cb = _HOOKPROC(self._ll_keyboard)
+        # Scan codes we swallowed on keydown — suppresses hook-level autorepeat
+        # (RegisterHotKey's MOD_NOREPEAT does not apply here) and lets us
+        # swallow the matching keyup as well.
+        self._save_held: set[int] = set()
         self.failures: list[tuple[str, str]] = []
         self.save_failures: list[tuple[str, str]] = []
         self.registered: list[int] = []
         self.toggle_live = False
+        self.save_hook_live = False
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -84,6 +133,7 @@ class HotkeyService:
         self.save_failures = []
         self.registered = []
         self.toggle_live = False
+        self.save_hook_live = False
         self._thread = threading.Thread(target=self._run, name="hotkeys", daemon=True)
         self._thread.start()
         if not self._ready.wait(timeout=5):
@@ -100,11 +150,16 @@ class HotkeyService:
     def status_warning(self) -> str:
         """Human-readable problem summary, or '' when every slot is live."""
         lines: list[str] = []
-        for failures, label in ((self.failures, "적용"), (self.save_failures, "저장")):
+        # Save slots ride on the keyboard hook; registration failures for them
+        # only matter when the hook could not be installed either.
+        save_failures = [] if self.save_hook_live else self.save_failures
+        for failures, label in ((self.failures, "적용"), (save_failures, "저장")):
             if not failures:
                 continue
             slots = ", ".join(slot for slot, _ in failures)
             lines.append(f"{label} 단축키 등록 실패: NumPad {slots}\n{failures[0][1]}")
+        if self._on_save is not None and not self.save_hook_live:
+            lines.append("저장 단축키 감지 훅 설치에 실패했습니다. Ctrl+Alt+Shift+NumPad가 동작하지 않을 수 있습니다.")
         if self._on_toggle is not None and not self.toggle_live:
             lines.append("토글 단축키(Ctrl+Alt+.) 등록에 실패했습니다.")
         if not numlock_on():
@@ -140,10 +195,55 @@ class HotkeyService:
             if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT, vk):
                 self.toggle_live = True
 
+    def _save_combo_down(self, vk: int) -> bool:
+        """True when Ctrl+Alt+Shift is physically held for a NumPad keydown.
+
+        The keyboard driver fakes a Shift *release* around Shift+NumPad and
+        flips the key's NumLock meaning (Shift+NumPad8 arrives as VK_UP with
+        Shift up), which is why RegisterHotKey(MOD_SHIFT, VK_NUMPAD*) never
+        fires from a real keyboard. A digit/NumLock mismatch therefore means
+        Shift is actually held even when GetAsyncKeyState says otherwise.
+        """
+        def down(key: int) -> bool:
+            return bool(user32.GetAsyncKeyState(key) & 0x8000)
+
+        if not (down(VK_CONTROL) and down(VK_MENU)):
+            return False
+        if down(VK_SHIFT):
+            return True
+        is_digit = 0x60 <= vk <= 0x69
+        return is_digit != numlock_on()
+
+    def _ll_keyboard(self, n_code: int, w_param: int, l_param: int) -> int:
+        if n_code == 0 and self._on_save is not None:
+            kb = ctypes.cast(l_param, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
+            if not kb.flags & LLKHF_EXTENDED and kb.scanCode in SC_NUMPAD:
+                if w_param in (WM_KEYDOWN, WM_SYSKEYDOWN):
+                    if kb.scanCode in self._save_held:
+                        return 1  # autorepeat of a swallowed key
+                    if self._save_combo_down(kb.vkCode):
+                        self._save_held.add(kb.scanCode)
+                        try:
+                            self._on_save(str(SC_NUMPAD[kb.scanCode]))
+                        except Exception:
+                            pass
+                        return 1  # swallow — keep the nav key out of the focused app
+                elif w_param in (WM_KEYUP, WM_SYSKEYUP) and kb.scanCode in self._save_held:
+                    self._save_held.discard(kb.scanCode)
+                    return 1  # swallow the matching keyup too
+        return user32.CallNextHookEx(None, n_code, w_param, l_param)
+
     def _run(self) -> None:
         self._thread_id = kernel32.GetCurrentThreadId()
         try:
             self._register_all()
+            if self._on_save is not None:
+                # Save combos need the hook (see _save_combo_down); the
+                # RegisterHotKey slots above stay as a synthetic-input fallback.
+                self._hook = user32.SetWindowsHookExW(
+                    WH_KEYBOARD_LL, self._hook_cb, kernel32.GetModuleHandleW(None), 0
+                )
+                self.save_hook_live = bool(self._hook)
         finally:
             # Always release start(); a partial or total failure is reported
             # through self.failures, not by leaving the caller blocked.
@@ -171,6 +271,10 @@ class HotkeyService:
                 user32.TranslateMessage(ctypes.byref(msg))
                 user32.DispatchMessageW(ctypes.byref(msg))
         finally:
+            if self._hook:
+                user32.UnhookWindowsHookEx(self._hook)
+                self._hook = None
+                self.save_hook_live = False
             for hotkey_id in self.registered:
                 user32.UnregisterHotKey(None, hotkey_id)
             self.registered = []
