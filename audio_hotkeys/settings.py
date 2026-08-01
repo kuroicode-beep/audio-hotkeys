@@ -251,7 +251,7 @@ class SettingsWindow:
             fg=theme.ACCENT,
             font=mono,
         ).pack(side="left", padx=(theme.px(12), 0))
-        for key in ("hotkeys_save", "hotkeys_toggle"):
+        for key in ("hotkeys_save", "hotkeys_toggle", "hotkeys_settings"):
             tk.Label(
                 hotkey_help,
                 text=t(key, self.lang),

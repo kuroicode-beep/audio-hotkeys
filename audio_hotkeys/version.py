@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.4.5"
+APP_VERSION = "1.5.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.5.0",
+        "2026-08-01",
+        "설정 창을 여는 단축키 추가 (Ctrl+Alt+Shift+.). "
+        "NumPad `.`와 메인 키보드 `.` 둘 다 동작하며, 이미 열려 있으면 창을 앞으로 가져온다.",
+    ),
     (
         "1.4.5",
         "2026-08-01",

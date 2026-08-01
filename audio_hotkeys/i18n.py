@@ -62,6 +62,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_kakao_too": "카카오톡 포함",
         "captured_no_kakao": "카카오톡 미실행 — 기존 값 유지",
         "hotkeys_toggle": "직전 슬롯과 토글: Ctrl+Alt+.",
+        "hotkeys_settings": "설정 창 열기: Ctrl+Alt+Shift+.",
         "no_previous_slot": "돌아갈 직전 슬롯이 없습니다.\n슬롯을 두 개 이상 적용한 뒤 사용하세요.",
     },
     "en": {
@@ -121,6 +122,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_kakao_too": "KakaoTalk included",
         "captured_no_kakao": "KakaoTalk not running — kept previous values",
         "hotkeys_toggle": "Toggle previous slot: Ctrl+Alt+.",
+        "hotkeys_settings": "Open settings: Ctrl+Alt+Shift+.",
         "no_previous_slot": "No previous slot to go back to.\nApply two different slots first.",
     },
     "ja": {
@@ -180,6 +182,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_kakao_too": "カカオトーク含む",
         "captured_no_kakao": "カカオトーク未起動 — 既存値を維持",
         "hotkeys_toggle": "直前のスロットと切替: Ctrl+Alt+.",
+        "hotkeys_settings": "設定を開く: Ctrl+Alt+Shift+.",
         "no_previous_slot": "戻れる直前のスロットがありません。\n先に2つ以上のスロットを適用してください。",
     },
     "zh": {
@@ -239,6 +242,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_kakao_too": "包含 KakaoTalk",
         "captured_no_kakao": "KakaoTalk 未运行 — 保留原值",
         "hotkeys_toggle": "切换上一个插槽: Ctrl+Alt+.",
+        "hotkeys_settings": "打开设置: Ctrl+Alt+Shift+.",
         "no_previous_slot": "没有可返回的上一个插槽。\n请先应用两个不同的插槽。",
     },
     "vi": {
@@ -298,6 +302,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "captured_kakao_too": "Bao gồm KakaoTalk",
         "captured_no_kakao": "KakaoTalk không chạy — giữ giá trị cũ",
         "hotkeys_toggle": "Chuyển về khe trước: Ctrl+Alt+.",
+        "hotkeys_settings": "Mở cài đặt: Ctrl+Alt+Shift+.",
         "no_previous_slot": "Không có khe trước để quay lại.\nHãy áp dụng hai khe khác nhau trước.",
     },
 }

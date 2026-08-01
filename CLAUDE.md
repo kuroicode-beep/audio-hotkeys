@@ -23,7 +23,7 @@ audio-hotkeys.spec`을 직접 실행할 것. (백로그: 스크립트 자체 보
 
 | 모듈 | 역할 |
 |---|---|
-| `hotkeys.py` | Win32 `RegisterHotKey` + 메시지 루프 스레드. id 범위로 구분: 적용 1–10 / 저장 11–20 / 토글 21–22 |
+| `hotkeys.py` | Win32 `RegisterHotKey` + 메시지 루프 스레드 + `WH_KEYBOARD_LL` 훅(Shift+NumPad). id 범위로 구분: 적용 1–10 / 저장 11–20 / 토글 21–22 / 설정 열기 23–24 |
 | `foreground.py` | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`로 창 전환 감지 (Alt+Tab은 후킹 불가). `ForegroundWatcher` |
 | `audio.py` | 장치 열거·볼륨(pycaw), PolicyConfig COM 기본 장치 전환, `resolve_device()`, `ApplyResult` |
 | `kakao.py` | KakaoTalk 전용 라우팅 (번들 `tools/svcl/svcl.exe`) |

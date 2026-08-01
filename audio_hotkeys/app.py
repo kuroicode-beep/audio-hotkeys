@@ -77,6 +77,7 @@ class App:
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
             on_save=lambda slot: self.root.after(0, lambda s=slot: self.save_slot(s)),
             on_toggle=lambda: self.root.after(0, self.toggle_slot),
+            on_settings=lambda: self.root.after(0, self.open_settings),
             on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
         )
 
