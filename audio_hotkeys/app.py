@@ -46,6 +46,7 @@ class App:
     def __init__(self) -> None:
         config.ensure_config()
         theme.enable_dpi_awareness()  # must precede the first Tk window
+        theme.load_private_fonts()  # bundled fonts, also before the first Tk window
         self.root = tk.Tk()
         theme.init_scale(self.root)
         self.root.withdraw()

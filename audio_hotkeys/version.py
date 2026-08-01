@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.6.0",
+        "2026-08-01",
+        "기본 글꼴을 라인시드(LINE Seed KR)로 변경하고 앱에 번들해 설치 없이 동작. "
+        "설정 창을 스냅샷 / 화면 설정 / 정보 3개 탭으로 재정렬해 한 화면의 혼잡을 줄였다.",
+    ),
     (
         "1.5.0",
         "2026-08-01",
