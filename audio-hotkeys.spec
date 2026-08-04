@@ -9,7 +9,10 @@ a = Analysis(
     ["launcher.py"],
     pathex=["."],
     binaries=[],
-    datas=[("tools/svcl/svcl.exe", "tools/svcl")],
+    datas=[
+        ("tools/svcl/svcl.exe", "tools/svcl"),
+        ("assets/fonts", "assets/fonts"),
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

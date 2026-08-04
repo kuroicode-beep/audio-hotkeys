@@ -75,6 +75,11 @@ def resolve_family(font_id: str, root: tk.Misc | None = None) -> str:
                 for key, original in families.items():
                     if key.replace(" ", "") == compact:
                         return original
+                # 번들 폰트는 굵기 접미사가 붙은 이름으로 잡히기도 한다
+                # (예: "LINE Seed Sans KR Regular") — 접두 일치로 재시도.
+                for key, original in families.items():
+                    if key.replace(" ", "").startswith(compact):
+                        return original
                 break
         return "Malgun Gothic"
     finally:
@@ -97,7 +102,8 @@ def available_fonts(root: tk.Misc | None = None) -> list[dict[str, str]]:
                 out.append(entry)
                 continue
             fam = entry["family"].lower().replace(" ", "")
-            if fam in families:
+            # 접두 일치 허용 — 번들 폰트는 "LINE Seed Sans KR Regular"처럼 잡힌다.
+            if any(name.startswith(fam) for name in families):
                 out.append(entry)
         if not any(e["id"] == theme.FONT_DEFAULT_ID for e in out):
             out.insert(0, theme.FONT_CATALOG[0])

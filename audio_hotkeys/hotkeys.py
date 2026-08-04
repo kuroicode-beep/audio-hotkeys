@@ -52,6 +52,7 @@ SC_NUMPAD = {
     0x52: 0, 0x4F: 1, 0x50: 2, 0x51: 3, 0x4B: 4,
     0x4C: 5, 0x4D: 6, 0x47: 7, 0x48: 8, 0x49: 9,
 }
+SC_NUMPAD_DECIMAL = 0x53  # NumPad "." — same fake-Shift override as the digits
 
 
 class KBDLLHOOKSTRUCT(ctypes.Structure):
@@ -77,11 +78,13 @@ kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 
 # Ctrl+Alt+NumPad N applies slot N; adding Shift saves the live audio state
-# into slot N; Ctrl+Alt+"." toggles back to the previously applied slot.
+# into slot N; Ctrl+Alt+"." toggles back to the previously applied slot;
+# Ctrl+Alt+Shift+"." opens the settings window.
 # Separate id ranges keep the actions apart in the message loop.
 APPLY_ID_BASE = 1
 SAVE_ID_BASE = 11
 TOGGLE_IDS = (21, 22)
+SETTINGS_IDS = (23, 24)  # NumPad "." (synthetic fallback) + main-keyboard "."
 
 
 def numlock_on() -> bool:
@@ -102,11 +105,13 @@ class HotkeyService:
         on_slot: Callable[[str], None],
         on_save: Callable[[str], None] | None = None,
         on_toggle: Callable[[], None] | None = None,
+        on_settings: Callable[[], None] | None = None,
         on_error: Callable[[str], None] | None = None,
     ) -> None:
         self._on_slot = on_slot
         self._on_save = on_save
         self._on_toggle = on_toggle
+        self._on_settings = on_settings
         self._on_error = on_error
         self._thread: threading.Thread | None = None
         self._thread_id = 0
@@ -123,6 +128,7 @@ class HotkeyService:
         self.save_failures: list[tuple[str, str]] = []
         self.registered: list[int] = []
         self.toggle_live = False
+        self.settings_live = False
         self.save_hook_live = False
 
     def start(self) -> None:
@@ -133,6 +139,7 @@ class HotkeyService:
         self.save_failures = []
         self.registered = []
         self.toggle_live = False
+        self.settings_live = False
         self.save_hook_live = False
         self._thread = threading.Thread(target=self._run, name="hotkeys", daemon=True)
         self._thread.start()
@@ -162,6 +169,10 @@ class HotkeyService:
             lines.append("저장 단축키 감지 훅 설치에 실패했습니다. Ctrl+Alt+Shift+NumPad가 동작하지 않을 수 있습니다.")
         if self._on_toggle is not None and not self.toggle_live:
             lines.append("토글 단축키(Ctrl+Alt+.) 등록에 실패했습니다.")
+        # NumPad "." rides on the hook; only warn when the main-keyboard
+        # registration failed and the hook is dead too.
+        if self._on_settings is not None and not self.settings_live and not self.save_hook_live:
+            lines.append("설정 창 단축키(Ctrl+Alt+Shift+.) 등록에 실패했습니다.")
         if not numlock_on():
             lines.append("NumLock이 꺼져 있어 NumPad 단축키가 동작하지 않습니다.")
         return "\n".join(lines)
@@ -187,22 +198,29 @@ class HotkeyService:
             if reason:
                 self.save_failures.append((str(slot), reason))
 
-        if self._on_toggle is None:
-            return
-        # Both "." keys drive the same toggle. The main-keyboard one keeps
-        # working when NumLock is off, so either alone is enough.
-        for hotkey_id, vk in zip(TOGGLE_IDS, (VK_DECIMAL, VK_OEM_PERIOD)):
-            if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT, vk):
-                self.toggle_live = True
+        if self._on_toggle is not None:
+            # Both "." keys drive the same toggle. The main-keyboard one keeps
+            # working when NumLock is off, so either alone is enough.
+            for hotkey_id, vk in zip(TOGGLE_IDS, (VK_DECIMAL, VK_OEM_PERIOD)):
+                if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT, vk):
+                    self.toggle_live = True
 
-    def _save_combo_down(self, vk: int) -> bool:
+        if self._on_settings is not None:
+            # Ctrl+Alt+Shift+"." opens settings. The NumPad registration only
+            # matches synthetic input (fake-Shift, see _shift_combo_down) —
+            # real NumPad presses come in through the keyboard hook instead.
+            for hotkey_id, vk in zip(SETTINGS_IDS, (VK_DECIMAL, VK_OEM_PERIOD)):
+                if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT | MOD_SHIFT, vk):
+                    self.settings_live = True
+
+    def _shift_combo_down(self, vk: int) -> bool:
         """True when Ctrl+Alt+Shift is physically held for a NumPad keydown.
 
         The keyboard driver fakes a Shift *release* around Shift+NumPad and
         flips the key's NumLock meaning (Shift+NumPad8 arrives as VK_UP with
         Shift up), which is why RegisterHotKey(MOD_SHIFT, VK_NUMPAD*) never
-        fires from a real keyboard. A digit/NumLock mismatch therefore means
-        Shift is actually held even when GetAsyncKeyState says otherwise.
+        fires from a real keyboard. A NumPad-VK/NumLock mismatch therefore
+        means Shift is actually held even when GetAsyncKeyState says otherwise.
         """
         def down(key: int) -> bool:
             return bool(user32.GetAsyncKeyState(key) & 0x8000)
@@ -211,20 +229,29 @@ class HotkeyService:
             return False
         if down(VK_SHIFT):
             return True
-        is_digit = 0x60 <= vk <= 0x69
-        return is_digit != numlock_on()
+        is_numpad_vk = 0x60 <= vk <= 0x6F  # digits + VK_DECIMAL
+        return is_numpad_vk != numlock_on()
+
+    def _hooked_action(self, scan_code: int) -> Callable[[], None] | None:
+        """Shift+NumPad action for a physical scan code, or None."""
+        if scan_code in SC_NUMPAD and self._on_save is not None:
+            return lambda: self._on_save(str(SC_NUMPAD[scan_code]))
+        if scan_code == SC_NUMPAD_DECIMAL and self._on_settings is not None:
+            return self._on_settings
+        return None
 
     def _ll_keyboard(self, n_code: int, w_param: int, l_param: int) -> int:
-        if n_code == 0 and self._on_save is not None:
+        if n_code == 0:
             kb = ctypes.cast(l_param, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
-            if not kb.flags & LLKHF_EXTENDED and kb.scanCode in SC_NUMPAD:
+            action = None if kb.flags & LLKHF_EXTENDED else self._hooked_action(kb.scanCode)
+            if action is not None:
                 if w_param in (WM_KEYDOWN, WM_SYSKEYDOWN):
                     if kb.scanCode in self._save_held:
                         return 1  # autorepeat of a swallowed key
-                    if self._save_combo_down(kb.vkCode):
+                    if self._shift_combo_down(kb.vkCode):
                         self._save_held.add(kb.scanCode)
                         try:
-                            self._on_save(str(SC_NUMPAD[kb.scanCode]))
+                            action()
                         except Exception:
                             pass
                         return 1  # swallow — keep the nav key out of the focused app
@@ -237,8 +264,8 @@ class HotkeyService:
         self._thread_id = kernel32.GetCurrentThreadId()
         try:
             self._register_all()
-            if self._on_save is not None:
-                # Save combos need the hook (see _save_combo_down); the
+            if self._on_save is not None or self._on_settings is not None:
+                # Shift+NumPad combos need the hook (see _shift_combo_down); the
                 # RegisterHotKey slots above stay as a synthetic-input fallback.
                 self._hook = user32.SetWindowsHookExW(
                     WH_KEYBOARD_LL, self._hook_cb, kernel32.GetModuleHandleW(None), 0
@@ -284,6 +311,10 @@ class HotkeyService:
             if hotkey_id in TOGGLE_IDS:
                 if self._on_toggle is not None:
                     self._on_toggle()
+                return
+            if hotkey_id in SETTINGS_IDS:
+                if self._on_settings is not None:
+                    self._on_settings()
                 return
             if hotkey_id >= SAVE_ID_BASE:
                 handler, slot = self._on_save, hotkey_id - SAVE_ID_BASE

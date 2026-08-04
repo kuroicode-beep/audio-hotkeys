@@ -222,47 +222,39 @@ class SettingsWindow:
             bordercolor=theme.BG,
             arrowcolor=theme.TEXT,
         )
+        # 탭: 선택은 색 + 탭 라벨(텍스트)로 구분, 위계는 크기·색으로만.
+        style.configure("TNotebook", background=theme.BG, borderwidth=0, tabmargins=(0, 0, 0, 0))
+        style.configure(
+            "TNotebook.Tab",
+            background=theme.SURFACE,
+            foreground=theme.TEXT_SUB,
+            padding=(theme.px(22), theme.px(12)),
+            font=font,
+            borderwidth=0,
+            focuscolor=theme.FOCUS,
+        )
+        style.map(
+            "TNotebook.Tab",
+            background=[("selected", theme.SURFACE_2)],
+            foreground=[("selected", theme.ACCENT_STRONG)],
+            # clam은 선택 탭을 오히려 좁게 그린다 — 바깥으로 키워 라벨이 끼지 않게.
+            expand=[("selected", (theme.px(2), theme.px(2), theme.px(2), 0))],
+        )
 
         outer = tk.Frame(self.root, bg=theme.BG, padx=theme.PAD_CARD, pady=theme.PAD_CARD)
         outer.pack(fill="both", expand=True)
 
-        header = tk.Frame(outer, bg=theme.BG)
-        header.pack(fill="x", pady=(0, theme.px(12)))
-        self._secondary_button(header, t("update_history", self.lang), self._show_history).pack(side="right")
+        self._tabs = ttk.Notebook(outer, takefocus=False)
+        snap_tab = tk.Frame(self._tabs, bg=theme.BG, padx=theme.px(4), pady=theme.px(14))
+        disp_tab = tk.Frame(self._tabs, bg=theme.BG, padx=theme.px(4), pady=theme.px(14))
+        info_tab = tk.Frame(self._tabs, bg=theme.BG, padx=theme.px(4), pady=theme.px(14))
+        self._tabs.add(snap_tab, text=t("tab_snapshot", self.lang))
+        self._tabs.add(disp_tab, text=t("display", self.lang))
+        self._tabs.add(info_tab, text=t("tab_info", self.lang))
+        self._tabs.pack(fill="both", expand=True)
 
-        hotkey_help = tk.Frame(header, bg=theme.BG)
-        hotkey_help.pack(side="left", fill="x")
-        apply_row = tk.Frame(hotkey_help, bg=theme.BG)
-        apply_row.pack(anchor="w")
-        tk.Label(
-            apply_row,
-            text=t("hotkeys_fixed", self.lang),
-            bg=theme.BG,
-            fg=theme.TEXT_SUB,
-            font=font,
-            anchor="w",
-            justify="left",
-        ).pack(side="left")
-        # 버전은 상시 표시 + 숫자이므로 모노체
-        tk.Label(
-            apply_row,
-            text=f"v{APP_VERSION}",
-            bg=theme.BG,
-            fg=theme.ACCENT,
-            font=mono,
-        ).pack(side="left", padx=(theme.px(12), 0))
-        for key in ("hotkeys_save", "hotkeys_toggle"):
-            tk.Label(
-                hotkey_help,
-                text=t(key, self.lang),
-                bg=theme.BG,
-                fg=theme.TEXT_SUB,
-                font=font,
-                anchor="w",
-                justify="left",
-            ).pack(anchor="w")
-
-        slot_row = tk.Frame(outer, bg=theme.BG)
+        # --- 스냅샷 탭: 슬롯 선택 → 장치 카드(스크롤) → 액션 ---
+        slot_row = tk.Frame(snap_tab, bg=theme.BG)
         slot_row.pack(fill="x", pady=(0, 12))
         tk.Label(slot_row, text=t("slot", self.lang), bg=theme.BG, fg=theme.TEXT, font=font).pack(side="left")
         self.slot_box = ttk.Combobox(
@@ -277,7 +269,7 @@ class SettingsWindow:
         self.slot_box.bind("<<ComboboxSelected>>", lambda _e: self._load_slot(self.slot.get()))
         self._darken_combobox_popdown(self.slot_box)
 
-        body = tk.Frame(outer, bg=theme.BG)
+        body = tk.Frame(snap_tab, bg=theme.BG)
         body.pack(fill="both", expand=True)
         canvas = tk.Canvas(body, bg=theme.BG, highlightthickness=0)
         scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
@@ -292,31 +284,49 @@ class SettingsWindow:
         canvas.configure(yscrollcommand=scroll.set)
         canvas.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
-        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
 
-        self._card(form_host, t("display", self.lang), font, self._prefs_body)
+        def _wheel(e: tk.Event) -> None:
+            # 스냅샷 탭이 열려 있을 때만 — 다른 탭에서 숨은 캔버스를 굴리지 않게.
+            try:
+                if self._tabs.index(self._tabs.select()) == 0:
+                    canvas.yview_scroll(int(-e.delta / 120), "units")
+            except tk.TclError:
+                pass
+
+        canvas.bind_all("<MouseWheel>", _wheel)
+
         self._card(form_host, t("system", self.lang), font, self._system_body)
         self._card(form_host, t("kakao_section", self.lang), font, self._kakao_body)
 
-        actions = tk.Frame(outer, bg=theme.BG)
-        actions.pack(fill="x", pady=16)
+        actions = tk.Frame(snap_tab, bg=theme.BG)
+        actions.pack(fill="x", pady=(12, 0))
         self._primary_button(actions, t("save_slot", self.lang), self._save_slot).pack(side="left")
         self._primary_button(actions, t("apply_now", self.lang), self._apply_now).pack(side="left", padx=8)
         self._secondary_button(actions, t("capture_current", self.lang), self._capture_current).pack(side="left")
         self._secondary_button(actions, t("capture_kakao", self.lang), self._capture_kakao).pack(side="left", padx=8)
-        self._secondary_button(actions, t("close", self.lang), self.root.destroy).pack(side="right")
 
+        # --- 화면 설정 탭 ---
+        self._card(disp_tab, t("display", self.lang), font, self._prefs_body)
+
+        # --- 정보 탭: 단축키 안내 + 버전/업데이트 히스토리 ---
+        self._card(info_tab, t("hotkeys_title", self.lang), font, self._hotkeys_body)
+        self._card(info_tab, t("version_label", self.lang), font, self._about_body)
+
+        # --- 공통 하단: 상태 표시 + 닫기 ---
+        bottom = tk.Frame(outer, bg=theme.BG)
+        bottom.pack(fill="x", pady=(theme.px(10), 0))
+        self._secondary_button(bottom, t("close", self.lang), self.root.destroy).pack(side="right")
         self._status = tk.Label(
-            outer,
+            bottom,
             textvariable=self.status_var,
             bg=theme.BG,
             fg=theme.TEXT_SUB,
             font=font,
             anchor="w",
             justify="left",
-            wraplength=780,
+            wraplength=theme.px(660),  # 논리 px — 고DPI에서 너무 일찍 줄바꿈되지 않게
         )
-        self._status.pack(anchor="w")
+        self._status.pack(side="left", fill="x", expand=True)
 
         self.root.bind("<Alt-Left>", lambda _e: self._go_back())
         self.root.bind("<Alt-Right>", lambda _e: "break")
@@ -436,6 +446,25 @@ class SettingsWindow:
             parent, t("input_volume", self.lang), font, mono, t("set", self.lang), self.lang
         )
 
+    def _hotkeys_body(self, parent: tk.Misc, font: tuple) -> None:
+        for key in ("hotkeys_fixed", "hotkeys_save", "hotkeys_toggle", "hotkeys_settings"):
+            tk.Label(
+                parent,
+                text=t(key, self.lang),
+                bg=theme.SURFACE,
+                fg=theme.TEXT,
+                font=font,
+                anchor="w",
+                justify="left",
+            ).pack(anchor="w", pady=2)
+
+    def _about_body(self, parent: tk.Misc, font: tuple) -> None:
+        row = tk.Frame(parent, bg=theme.SURFACE)
+        row.pack(fill="x")
+        # 버전은 숫자 → 모노체
+        tk.Label(row, text=f"v{APP_VERSION}", bg=theme.SURFACE, fg=theme.ACCENT, font=self._mono()).pack(side="left")
+        self._secondary_button(row, t("update_history", self.lang), self._show_history).pack(side="right")
+
     def _on_font_preview(self, apply: bool = True) -> None:
         label = self.font_id_var.get()
         font_id = self._font_map.get(label, self.prefs["font_id"])
@@ -459,11 +488,19 @@ class SettingsWindow:
         if rebuild or changed:
             self.lang = lang
             geom = self.root.geometry()
+            try:
+                tab_index = self._tabs.index(self._tabs.select())
+            except tk.TclError:
+                tab_index = 0
             for child in self.root.winfo_children():
                 child.destroy()
             self._build()
             self._load_slot(self.slot.get())
             self.root.geometry(geom)
+            try:
+                self._tabs.select(tab_index)
+            except tk.TclError:
+                pass
         else:
             self._on_font_preview(apply=False)
 

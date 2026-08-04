@@ -7,6 +7,8 @@ tkinter가 픽셀로 해석하도록 음수 크기를 돌려준다 (양수는 �
 from __future__ import annotations
 
 import ctypes
+import os
+import sys
 import tkinter as tk
 
 # Colors — Outline: SVIL 프론트엔드 · 디자인 가이드 v1.1
@@ -31,8 +33,8 @@ LEVEL_COLOR = {"normal": TEXT, "warning": WARNING, "error": NEGATIVE, "positive"
 LEVEL_LABEL = {"normal": "", "warning": "⚠ 주의", "error": "✖ 오류", "positive": "✓ 완료"}
 
 # Typography
-FONT_DEFAULT_ID = "kyobo-handwriting-2019"
-FONT_STACK_DEFAULT = ("KyoboHandwriting2019", "Pretendard", "Malgun Gothic", "Segoe UI")
+FONT_DEFAULT_ID = "line-seed"
+FONT_STACK_DEFAULT = ("LINE Seed Sans KR", "Pretendard", "Malgun Gothic", "Segoe UI")
 FONT_MONO = ("Consolas", "Cascadia Mono", "Courier New")
 
 FONT_SIZE_PX = {
@@ -51,7 +53,13 @@ FOCUS_WIDTH = 3
 BORDER_WIDTH = 2
 
 # Font catalog (only ids that resolve locally are selectable at runtime)
+# 라인시드가 SVIL 표준 기본 — 번들 폰트(assets/fonts)를 load_private_fonts()로 올린다.
 FONT_CATALOG: list[dict[str, str]] = [
+    {
+        "id": "line-seed",
+        "label": "라인시드체",
+        "family": "LINE Seed Sans KR",
+    },
     {
         "id": "kyobo-handwriting-2019",
         "label": "교보손글씨2019",
@@ -66,11 +74,6 @@ FONT_CATALOG: list[dict[str, str]] = [
         "id": "nanum-gothic",
         "label": "나눔고딕",
         "family": "NanumGothic",
-    },
-    {
-        "id": "line-seed",
-        "label": "라인시드체",
-        "family": "LINE Seed Sans KR",
     },
     {
         "id": "gowun-dodum",
@@ -93,6 +96,32 @@ FONT_CATALOG: list[dict[str, str]] = [
         "family": "Recipekorea",
     },
 ]
+
+
+# --- Bundled fonts ---------------------------------------------------------
+
+
+def load_private_fonts() -> None:
+    """번들 폰트(assets/fonts)를 이 프로세스 전용으로 등록한다.
+
+    FR_PRIVATE라 시스템 설치 없이 이 프로세스에서만 보인다.
+    첫 Tk 창을 만들기 전에 호출해야 tkfont.families()에 잡힌다.
+    """
+    roots = [os.path.dirname(os.path.dirname(os.path.abspath(__file__)))]
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            roots.append(meipass)
+        roots.append(os.path.dirname(os.path.abspath(sys.executable)))
+    FR_PRIVATE = 0x10
+    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+    for root in roots:
+        folder = os.path.join(root, "assets", "fonts")
+        if not os.path.isdir(folder):
+            continue
+        for name in os.listdir(folder):
+            if name.lower().endswith((".ttf", ".otf", ".ttc")):
+                gdi32.AddFontResourceExW(os.path.join(folder, name), FR_PRIVATE, 0)
 
 
 # --- DPI -------------------------------------------------------------------
