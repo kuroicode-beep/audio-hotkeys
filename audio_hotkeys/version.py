@@ -2,10 +2,17 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.10.0"
+APP_VERSION = "1.10.1"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.10.1",
+        "2026-09-11",
+        "동글형 헤드셋(레이저 2.4GHz)은 전원을 꺼도 Windows에 연결됨으로 남아 우선 스피커로 못 넘어가던 문제 수정. "
+        "헤드셋은 실제로 붙거나 떨어지는 순간을 한 번 본 뒤에만 믿고, 그 전엔 블루투스 스피커가 연결되면 스피커로 간다. "
+        "마지막에 붙은 장치가 이기고, 떨어지면 믿을 수 있는 장치 또는 원래 장치로 돌아간다.",
+    ),
     (
         "1.10.0",
         "2026-09-10",

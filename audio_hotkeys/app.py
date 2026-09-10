@@ -79,8 +79,10 @@ class App:
 
         # 헤드셋 자동 전환 감시 — 감시 중인 슬롯, 마지막으로 본 연결 여부, after 잡 id
         self._auto_slot: str | None = None
-        self._auto_present: bool | None = None
+        self._auto_present: tuple[bool, bool] | None = None
         self._auto_job: str | None = None
+        # 헤드셋 신뢰 — 동글형은 꺼도 '연결됨'으로 남으므로, 붙거나 떨어지는 순간을 한 번 본 뒤에만 믿는다
+        self._headset_trusted = False
 
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
@@ -154,12 +156,17 @@ class App:
         if present is not None and present != self._auto_present:
             before = self._auto_present or (False, False)
             self._auto_present = present
-            self.apply_slot(self._auto_slot)
-            # 무엇이 바뀌었는지 말로 알린다 — 헤드셋이 우선이라 헤드셋 변화가 있으면 그걸 먼저
-            if present[0] != before[0]:
-                key = "auto_switched_on" if present[0] else "auto_switched_off"
+            h, s = present
+            if h != before[0]:
+                # 헤드셋이 실제로 붙거나 떨어졌다 — 이제부터 헤드셋 존재 여부를 믿는다
+                self._headset_trusted = True
+                tier = "headset" if h else ("speaker" if s else "")
+                key = "auto_switched_on" if h else "auto_switched_off"
             else:
-                key = "auto_spk_on" if present[1] else "auto_spk_off"
+                # 스피커가 붙으면 스피커(마지막에 붙은 쪽이 이긴다), 떨어지면 믿을 수 있는 헤드셋이 있을 때만 헤드셋
+                tier = "speaker" if s else ("headset" if (h and self._headset_trusted) else "")
+                key = "auto_spk_on" if s else "auto_spk_off"
+            self.apply_slot(self._auto_slot, tier=tier)
             toast(self.root, t(key), level="positive")
         if self._auto_job is None:
             self._auto_job = self.root.after(PREF_POLL_MS, self._auto_tick)
@@ -174,7 +181,7 @@ class App:
     def open_settings(self) -> None:
         open_settings(on_saved=lambda: toast(self.root, t("snapshots_saved")))
 
-    def apply_slot(self, slot: str) -> None:
+    def apply_slot(self, slot: str, tier: str | None = None) -> None:
         data = config.load_config()
         snap = data["snapshots"].get(slot)
         if not snap:
@@ -182,7 +189,7 @@ class App:
             return
         name = str(snap.get("name") or "").strip() or f"Slot {slot}"
         try:
-            result = audio.apply_snapshot(snap)
+            result = audio.apply_snapshot(snap, tier=tier, headset_trusted=self._headset_trusted)
         except Exception as exc:  # noqa: BLE001
             show_profile_osd(self.root, slot, name, level="error")
             toast(self.root, t("apply_failed", error=audio.com_message(exc)), level="error")

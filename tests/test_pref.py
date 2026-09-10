@@ -51,12 +51,21 @@ def test_speaker_tier_output_only(monkeypatch):
     assert audio.presence_key(_slot0_with_speaker()) == (False, True)
 
 
-# 헤드셋과 스피커가 둘 다 있으면 헤드셋이 이긴다
-def test_headset_beats_speaker(monkeypatch):
+# 둘 다 '연결됨'이면: 헤드셋을 믿기 전엔 스피커(동글은 꺼도 연결됨으로 남는다), 믿은 뒤엔 헤드셋
+def test_headset_wins_only_when_trusted(monkeypatch):
     _fake_devices(monkeypatch, [FLOW_OUT, MIRACLE_OUT, RAZER_OUT], [RODE_IN, RAZER_IN])
     snap, tier = audio.effective_snapshot(_slot0_with_speaker())
+    assert tier == "speaker" and snap["output_id"] == MIRACLE_OUT.id
+    snap, tier = audio.effective_snapshot(_slot0_with_speaker(), headset_trusted=True)
     assert tier == "headset" and snap["output_id"] == RAZER_OUT.id
     assert audio.presence_key(_slot0_with_speaker()) == (True, True)
+
+
+# 층을 강제하면 존재 여부와 무관하게 그 층을 적용한다(감시가 연결 순간을 봤을 때)
+def test_forced_tier(monkeypatch):
+    _fake_devices(monkeypatch, [FLOW_OUT, MIRACLE_OUT, RAZER_OUT], [RODE_IN, RAZER_IN])
+    assert audio.effective_snapshot(_slot0_with_speaker(), tier="headset")[1] == "headset"
+    assert audio.effective_snapshot(_slot0_with_speaker(), tier="")[0]["output_id"] == FLOW_OUT.id
 
 
 # 둘 다 없으면 원본, presence_key는 (False, False); 아무것도 안 정한 슬롯은 None
@@ -68,10 +77,11 @@ def test_speaker_tier_absent(monkeypatch):
     assert audio.presence_key(dict(config.EMPTY_SNAPSHOT)) is None
 
 
-# 헤드셋이 꽂혀 있으면 시스템·카카오톡 출력/입력이 전부 헤드셋으로 바뀐다
+# 헤드셋이 꽂혀 있고 믿을 수 있으면 시스템·카카오톡 출력/입력이 전부 헤드셋으로 바뀐다
 def test_pref_present_overrides_all(monkeypatch):
     _fake_devices(monkeypatch, [FLOW_OUT, RAZER_OUT], [RODE_IN, RAZER_IN])
-    snap, used = audio.effective_snapshot(_slot0())
+    assert audio.effective_snapshot(_slot0())[1] == ""   # 아직 믿기 전 — 동글 함정
+    snap, used = audio.effective_snapshot(_slot0(), headset_trusted=True)
     assert used == "headset"
     assert snap["output_id"] == RAZER_OUT.id and snap["input_id"] == RAZER_IN.id
     assert snap["kakao_output_id"] == RAZER_OUT.id and snap["kakao_input_id"] == RAZER_IN.id
@@ -91,7 +101,7 @@ def test_pref_absent_keeps_base(monkeypatch):
 def test_pref_matches_by_name(monkeypatch):
     renamed = audio.AudioDevice(id="{0.0.0}.{new-id}", name=RAZER_OUT.name, flow="output")
     _fake_devices(monkeypatch, [FLOW_OUT, renamed], [RODE_IN])
-    snap, used = audio.effective_snapshot(_slot0())
+    snap, used = audio.effective_snapshot(_slot0(), headset_trusted=True)
     assert used == "headset" and snap["output_id"] == RAZER_OUT.id  # 저장된 id를 넘기고 apply 단계에서 이름 재매칭
 
 

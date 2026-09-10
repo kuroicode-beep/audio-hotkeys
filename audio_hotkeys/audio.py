@@ -201,13 +201,30 @@ def presence_key(snapshot: dict) -> tuple[bool, bool] | None:
     return bool(a), bool(b)
 
 
-def effective_snapshot(snapshot: dict) -> tuple[dict, str]:
-    """우선 장치가 연결돼 있으면 그 장치로 바꾼 사본을 돌려준다.
+def pick_tier(snapshot: dict, headset_trusted: bool = False) -> str:
+    """지금 연결 상태로 쓸 층을 고른다 — "headset" | "speaker" | "".
 
-    순서: 헤드셋(입·출력, 카카오톡 포함) > 우선 스피커(출력·카카오톡 출력만) > 슬롯 원래 장치.
+    헤드셋은 headset_trusted일 때만 정적 판단에 참여한다. 2.4GHz 동글형 헤드셋(레이저 등)은 전원을 꺼도
+    Windows에 ACTIVE·잭 연결됨으로 남아(2026-09-11 실측) 존재 여부만으로는 켜졌는지 알 수 없다.
+    그래서 앱은 헤드셋이 실제로 붙거나 떨어지는 순간을 한 번 본 뒤에야 trusted로 올린다.
+    블루투스 스피커는 연결 상태가 정직하므로 바로 믿는다.
+    """
+    if headset_trusted and pref_present(snapshot):
+        return "headset"
+    if pref2_present(snapshot):
+        return "speaker"
+    return ""
+
+
+def effective_snapshot(snapshot: dict, tier: str | None = None, headset_trusted: bool = False) -> tuple[dict, str]:
+    """우선 장치 층에 맞춰 출력/입력을 바꾼 사본을 돌려준다.
+
+    tier를 주면 그 층을 강제한다(감시가 연결 순간을 봤을 때). None이면 pick_tier()로 고른다.
     반환: (적용할 스냅샷, 쓴 층 — "headset" | "speaker" | "").
     """
-    if pref_present(snapshot):
+    if tier is None:
+        tier = pick_tier(snapshot, headset_trusted)
+    if tier == "headset":
         snap = dict(snapshot)
         for src_id, src_name, targets in (
             ("pref_output_id", "pref_output_name",
@@ -221,7 +238,7 @@ def effective_snapshot(snapshot: dict) -> tuple[dict, str]:
                 snap[id_field] = snapshot.get(src_id) or ""
                 snap[name_field] = snapshot.get(src_name) or ""
         return snap, "headset"
-    if pref2_present(snapshot):
+    if tier == "speaker":
         snap = dict(snapshot)
         for id_field, name_field in (("output_id", "output_name"), ("kakao_output_id", "kakao_output_name")):
             snap[id_field] = snapshot.get("pref2_output_id") or ""
@@ -248,14 +265,14 @@ def capture_system() -> dict:
     return fields
 
 
-def apply_snapshot(snapshot: dict) -> ApplyResult:
+def apply_snapshot(snapshot: dict, tier: str | None = None, headset_trusted: bool = False) -> ApplyResult:
     from . import kakao
 
     parts: list[str] = []
     warnings: list[str] = []
 
-    # 헤드셋 우선 장치가 꽂혀 있으면 그쪽으로 — 아니면 슬롯에 적힌 장치 그대로
-    snapshot, tier = effective_snapshot(snapshot)
+    # 우선 장치 층(헤드셋/스피커)에 맞춰 장치를 바꾼다 — 없으면 슬롯에 적힌 장치 그대로
+    snapshot, tier = effective_snapshot(snapshot, tier, headset_trusted)
     if tier:
         parts.append({"headset": "Headset", "speaker": "Speaker"}[tier])
 
