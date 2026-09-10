@@ -164,6 +164,47 @@ def resolve_device(device_id: str, device_name: str, flow: str) -> tuple[str, st
     return "", f"{label} 장치가 연결 해제되어 건너뛰었습니다 (다시 선택해 저장하세요)"
 
 
+def pref_present(snapshot: dict) -> bool | None:
+    """헤드셋 우선 장치가 지금 연결돼 있는지. 우선 장치를 정하지 않은 슬롯이면 None.
+
+    출력 장치를 기준으로 본다(헤드셋은 출력·입력이 함께 붙었다 떨어진다).
+    출력을 안 정했으면 입력으로 판단한다.
+    """
+    out_id = snapshot.get("pref_output_id") or ""
+    out_name = snapshot.get("pref_output_name") or ""
+    in_id = snapshot.get("pref_input_id") or ""
+    in_name = snapshot.get("pref_input_name") or ""
+    if not (out_id or out_name or in_id or in_name):
+        return None
+    if out_id or out_name:
+        live, _ = resolve_device(out_id, out_name, "output")
+        return bool(live)
+    live, _ = resolve_device(in_id, in_name, "input")
+    return bool(live)
+
+
+def effective_snapshot(snapshot: dict) -> tuple[dict, bool]:
+    """헤드셋 우선 장치가 연결돼 있으면 시스템·카카오톡 출력/입력을 그 장치로 바꾼 사본을 돌려준다.
+
+    반환: (적용할 스냅샷, 우선 장치를 썼는지). 안 꽂혀 있으면 원본 그대로.
+    """
+    if not pref_present(snapshot):
+        return snapshot, False
+    snap = dict(snapshot)
+    for src_id, src_name, targets in (
+        ("pref_output_id", "pref_output_name",
+         (("output_id", "output_name"), ("kakao_output_id", "kakao_output_name"))),
+        ("pref_input_id", "pref_input_name",
+         (("input_id", "input_name"), ("kakao_input_id", "kakao_input_name"))),
+    ):
+        if not (snapshot.get(src_id) or snapshot.get(src_name)):
+            continue
+        for id_field, name_field in targets:
+            snap[id_field] = snapshot.get(src_id) or ""
+            snap[name_field] = snapshot.get(src_name) or ""
+    return snap, True
+
+
 def capture_system() -> dict:
     """Live default devices + volumes as snapshot fields.
 
@@ -187,6 +228,11 @@ def apply_snapshot(snapshot: dict) -> ApplyResult:
 
     parts: list[str] = []
     warnings: list[str] = []
+
+    # 헤드셋 우선 장치가 꽂혀 있으면 그쪽으로 — 아니면 슬롯에 적힌 장치 그대로
+    snapshot, used_pref = effective_snapshot(snapshot)
+    if used_pref:
+        parts.append("Headset")
 
     for flow, id_field, name_field, vol_field, tag in (
         ("output", "output_id", "output_name", "output_volume", "Out"),

@@ -2,10 +2,17 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.8.0",
+        "2026-09-10",
+        "슬롯마다 '헤드셋 우선 장치'를 둘 수 있다. 그 장치가 연결돼 있을 때만 시스템·카카오톡 출력/입력을 "
+        "헤드셋으로 바꾸고, 안 꽂혀 있으면 슬롯의 원래 장치를 쓴다. 자동 전환을 켜면 앱이 연결/해제를 "
+        "감시해 헤드셋을 켜면 헤드셋으로, 끄면 원래 장치로 다시 적용한다(시작 시에도 감시).",
+    ),
     (
         "1.7.0",
         "2026-09-10",

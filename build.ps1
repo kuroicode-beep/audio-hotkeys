@@ -14,7 +14,11 @@ if (-not (Test-Path $py)) {
 # 시작 시각을 잡아 둔다. 아래에서 exe가 실제로 이번 실행에 다시 만들어졌는지 판정하는 기준이다.
 $startedAt = Get-Date
 
-& $py -m PyInstaller --noconfirm --clean "$PSScriptRoot\audio-hotkeys.spec"
+# 2026-09-10 — build\ 안의 localpycs 를 --clean 이 지우지 못해(WinError 5) 실패하는 일이 반복됐다.
+# 작업 폴더를 임시 경로로 빼고 매번 통째로 지운 뒤 만든다. --clean 은 그 폴더 삭제가 실패하면 빌드 전체를 죽이므로 뺀다.
+$work = Join-Path $env:TEMP "audio-hotkeys-build"
+if (Test-Path $work) { Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue }
+& $py -m PyInstaller --noconfirm --workpath $work "$PSScriptRoot\audio-hotkeys.spec"
 $pyiExit = $LASTEXITCODE
 
 $exe = Join-Path $PSScriptRoot "dist\audio-hotkeys.exe"

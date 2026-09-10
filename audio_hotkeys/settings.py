@@ -142,6 +142,10 @@ class SettingsWindow:
         self.font_size_var = tk.StringVar()
         self.lang_var = tk.StringVar()
         self.flow8_var = tk.StringVar()  # FLOW 8 믹서 본체 스냅샷 번호("없음" 또는 1~15)
+        self.pref_output_var = tk.StringVar()   # 헤드셋 우선 출력
+        self.pref_input_var = tk.StringVar()    # 헤드셋 우선 입력
+        self.pref_auto_var = tk.BooleanVar(value=False)
+        self._pref_saved: dict[str, str] = {}   # 미연결 상태에서 저장값을 잃지 않기 위한 원본
         self._font_preview_var = tk.StringVar()
 
         self.output_choices = audio.device_choices("output")
@@ -428,6 +432,21 @@ class SettingsWindow:
             parent, text=t("flow8_hint", self.lang), bg=theme.SURFACE, fg=theme.TEXT_SUB, font=font,
             anchor="w", justify="left", wraplength=theme.px(640),
         ).pack(fill="x", pady=(0, 8))
+        # 헤드셋 우선 장치 — 연결돼 있을 때만 위 장치 대신 쓴다
+        self._combo(parent, t("field_pref_out", self.lang), self.pref_output_var, [n for n, _ in self.output_choices], font)
+        self._combo(parent, t("field_pref_in", self.lang), self.pref_input_var, [n for n, _ in self.input_choices], font)
+        row = tk.Frame(parent, bg=theme.SURFACE)
+        row.pack(fill="x", pady=4)
+        tk.Checkbutton(
+            row, text=t("pref_auto", self.lang), variable=self.pref_auto_var,
+            bg=theme.SURFACE, fg=theme.TEXT, activebackground=theme.SURFACE, activeforeground=theme.TEXT,
+            selectcolor=theme.SURFACE_2, highlightthickness=theme.FOCUS_WIDTH,
+            highlightbackground=theme.BORDER_STRONG, highlightcolor=theme.FOCUS, font=font, padx=8, pady=8,
+        ).pack(side="left", ipady=6)
+        tk.Label(
+            parent, text=t("pref_hint", self.lang), bg=theme.SURFACE, fg=theme.TEXT_SUB, font=font,
+            anchor="w", justify="left", wraplength=theme.px(640),
+        ).pack(fill="x", pady=(0, 8))
 
     def _kakao_body(self, parent: tk.Misc, font: tuple) -> None:
         mono = self._mono()
@@ -668,6 +687,22 @@ class SettingsWindow:
         self.out_vol.set(snap.get("output_volume"))
         self.in_vol.set(snap.get("input_volume"))
         self.flow8_var.set(self._flow8_display(snap.get("flow8_snapshot")))
+        # 헤드셋 우선 장치는 안 꽂혀 있는 게 정상 상태다 — 경고 없이 "(미연결)"로만 표시하고 저장값은 보존
+        self._pref_saved = {k: snap.get(k) or "" for k in
+                            ("pref_output_id", "pref_output_name", "pref_input_id", "pref_input_name")}
+        for var, choices, flow, id_field, name_field in (
+            (self.pref_output_var, self.output_choices, "output", "pref_output_id", "pref_output_name"),
+            (self.pref_input_var, self.input_choices, "input", "pref_input_id", "pref_input_name"),
+        ):
+            saved_id, saved_name = snap.get(id_field) or "", snap.get(name_field) or ""
+            device_id, _ = audio.resolve_device(saved_id, saved_name, flow)
+            if device_id:
+                var.set(audio.find_display(choices, device_id))
+            elif saved_name:
+                var.set(f"{saved_name} ({t('offline', self.lang)})")
+            else:
+                var.set(t("unchanged", self.lang))
+        self.pref_auto_var.set(bool(snap.get("pref_auto")))
         self.kakao_out_vol.set(snap.get("kakao_output_volume"))
         self.kakao_in_vol.set(snap.get("kakao_input_volume"))
 
@@ -688,11 +723,22 @@ class SettingsWindow:
         device_id = mapping.get(display, "")
         return device_id, (display if device_id else "")
 
+    def _pick_keep(self, var: tk.StringVar, mapping: dict[str, str], id_key: str, name_key: str) -> tuple[str, str]:
+        """헤드셋 우선 장치용 _pick — 표시가 '(미연결)'이면 저장돼 있던 값을 그대로 돌려준다."""
+        display = var.get()
+        if display in mapping:
+            return mapping[display], display
+        if display == t("unchanged", self.lang):
+            return "", ""
+        return self._pref_saved.get(id_key, ""), self._pref_saved.get(name_key, "")
+
     def _read_form(self) -> dict:
         out_id, out_name = self._pick(self.output_var, self._output_map)
         in_id, in_name = self._pick(self.input_var, self._input_map)
         k_out_id, k_out_name = self._pick(self.kakao_output_var, self._output_map)
         k_in_id, k_in_name = self._pick(self.kakao_input_var, self._input_map)
+        p_out_id, p_out_name = self._pick_keep(self.pref_output_var, self._output_map, "pref_output_id", "pref_output_name")
+        p_in_id, p_in_name = self._pick_keep(self.pref_input_var, self._input_map, "pref_input_id", "pref_input_name")
         return {
             "name": self.name_var.get().strip() or f"Slot {self.slot.get()}",
             "output_id": out_id,
@@ -708,6 +754,11 @@ class SettingsWindow:
             "kakao_output_volume": self.kakao_out_vol.get(),
             "kakao_input_volume": self.kakao_in_vol.get(),
             "flow8_snapshot": self._flow8_parse(self.flow8_var.get()),
+            "pref_output_id": p_out_id,
+            "pref_output_name": p_out_name,
+            "pref_input_id": p_in_id,
+            "pref_input_name": p_in_name,
+            "pref_auto": bool(self.pref_auto_var.get()),
         }
 
     def _save_slot(self) -> None:

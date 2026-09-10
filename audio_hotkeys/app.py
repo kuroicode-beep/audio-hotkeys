@@ -20,6 +20,7 @@ from .win_shell import force_app_dark_mode
 
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
+PREF_POLL_MS = 3000  # 헤드셋 연결/해제 감시 주기
 
 
 class DarkIcon(WinIcon):
@@ -74,6 +75,11 @@ class App:
         self._last_slot: str | None = None
         self._prev_slot: str | None = None
 
+        # 헤드셋 자동 전환 감시 — 감시 중인 슬롯, 마지막으로 본 연결 여부, after 잡 id
+        self._auto_slot: str | None = None
+        self._auto_present: bool | None = None
+        self._auto_job: str | None = None
+
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
             on_save=lambda slot: self.root.after(0, lambda s=slot: self.save_slot(s)),
@@ -90,7 +96,51 @@ class App:
 
         self.icon.run_detached()
         self.root.after(400, self._startup_toast)
+        self.root.after(1500, self._arm_auto_from_config)
         self.root.mainloop()
+
+    # ── 헤드셋 자동 전환 ──
+    def _arm_auto_from_config(self) -> None:
+        """시작 시 자동 전환이 켜진 첫 슬롯을 감시한다. 바로 적용하진 않고 변화만 본다."""
+        data = config.load_config()
+        for key in config.SLOT_KEYS:
+            snap = data["snapshots"][key]
+            if snap.get("pref_auto") and audio.pref_present(snap) is not None:
+                self._arm_auto(key, snap)
+                return
+
+    def _arm_auto(self, slot: str, snap: dict) -> None:
+        self._auto_slot = slot
+        try:
+            self._auto_present = audio.pref_present(snap)
+        except Exception:  # noqa: BLE001
+            self._auto_present = None
+        if self._auto_job is None:
+            self._auto_job = self.root.after(PREF_POLL_MS, self._auto_tick)
+
+    def _disarm_auto(self) -> None:
+        self._auto_slot = None
+        self._auto_present = None
+
+    def _auto_tick(self) -> None:
+        self._auto_job = None
+        if self._auto_slot is None:
+            return
+        data = config.load_config()
+        snap = data["snapshots"].get(self._auto_slot)
+        if not snap or not snap.get("pref_auto"):
+            self._disarm_auto()
+            return
+        try:
+            present = audio.pref_present(snap)
+        except Exception:  # noqa: BLE001
+            present = self._auto_present
+        if present is not None and present != self._auto_present:
+            self._auto_present = present
+            self.apply_slot(self._auto_slot)
+            toast(self.root, t("auto_switched_on" if present else "auto_switched_off"), level="positive")
+        if self._auto_job is None:
+            self._auto_job = self.root.after(PREF_POLL_MS, self._auto_tick)
 
     def _startup_toast(self) -> None:
         warning = self.hotkeys.status_warning()
@@ -116,6 +166,11 @@ class App:
             toast(self.root, t("apply_failed", error=audio.com_message(exc)), level="error")
             return
         self._remember(slot)
+        # 자동 전환이 켜진 슬롯이면 감시 시작(기준 = 지금 연결 상태), 아니면 감시 해제
+        if snap.get("pref_auto") and audio.pref_present(snap) is not None:
+            self._arm_auto(slot, snap)
+        else:
+            self._disarm_auto()
         # The profile OSD is the whole point of the hotkey — show it even when a
         # single device is stale, and route the detail to its own toast.
         show_profile_osd(self.root, slot, name, level="warning" if result.warnings else "normal")

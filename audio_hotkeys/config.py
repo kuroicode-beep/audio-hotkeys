@@ -14,8 +14,8 @@ SLOT_KEYS = [str(i) for i in range(10)]
 # *_name mirrors each *_id so a snapshot survives a device id change
 # (USB re-enumeration, driver reinstall). The id is tried first, the name
 # is the fallback match.
-ID_FIELDS = ("output_id", "input_id", "kakao_output_id", "kakao_input_id")
-NAME_FIELDS = ("output_name", "input_name", "kakao_output_name", "kakao_input_name")
+ID_FIELDS = ("output_id", "input_id", "kakao_output_id", "kakao_input_id", "pref_output_id", "pref_input_id")
+NAME_FIELDS = ("output_name", "input_name", "kakao_output_name", "kakao_input_name", "pref_output_name", "pref_input_name")
 VOLUME_FIELDS = ("output_volume", "input_volume", "kakao_output_volume", "kakao_input_volume")
 
 EMPTY_SNAPSHOT: dict[str, Any] = {
@@ -33,6 +33,12 @@ EMPTY_SNAPSHOT: dict[str, Any] = {
     "kakao_output_volume": None,
     "kakao_input_volume": None,
     "flow8_snapshot": None,   # FLOW 8 믹서 본체 스냅샷 번호(1~15), None이면 안 보냄
+    # 헤드셋 우선 장치 — 연결돼 있을 때만 시스템·카카오톡 출력/입력을 이 장치로 바꾼다
+    "pref_output_id": "",
+    "pref_output_name": "",
+    "pref_input_id": "",
+    "pref_input_name": "",
+    "pref_auto": False,       # True면 연결/해제를 감시해 자동으로 다시 적용
 }
 
 
@@ -102,6 +108,7 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
             for field in VOLUME_FIELDS:
                 snap[field] = _volume(raw.get(field))
             snap["flow8_snapshot"] = _flow8(raw.get("flow8_snapshot"))
+            snap["pref_auto"] = bool(raw.get("pref_auto"))
             base["snapshots"][key] = snap
     ui = data.get("ui")
     if isinstance(ui, dict):
