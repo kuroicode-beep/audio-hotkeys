@@ -472,7 +472,7 @@ class SettingsWindow:
         )
 
     def _hotkeys_body(self, parent: tk.Misc, font: tuple) -> None:
-        for key in ("hotkeys_fixed", "hotkeys_save", "hotkeys_toggle", "hotkeys_settings"):
+        for key in ("hotkeys_fixed", "hotkeys_save", "hotkeys_toggle", "hotkeys_settings", "hotkeys_echo"):
             tk.Label(
                 parent,
                 text=t(key, self.lang),

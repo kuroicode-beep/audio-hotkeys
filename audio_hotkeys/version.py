@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.8.0"
+APP_VERSION = "1.9.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.9.0",
+        "2026-09-10",
+        "Ctrl+Alt+NumPad +/- 로 FLOW 8 1번 마이크의 에코(FX1 센드)를 한 단계씩 올리고 내린다. "
+        "본체 FX 버튼을 누를 필요가 없고, 현재 값이 큰 글씨로 잠깐 표시된다. 메인 키보드 =/- 도 같은 동작.",
+    ),
     (
         "1.8.0",
         "2026-09-10",

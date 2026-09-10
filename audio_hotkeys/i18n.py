@@ -78,6 +78,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "offline": "미연결",
         "auto_switched_on": "헤드셋 연결됨 — 헤드셋으로 전환",
         "auto_switched_off": "헤드셋 해제됨 — 원래 장치로 복귀",
+        "hotkeys_echo": "마이크 에코 강도: Ctrl+Alt+NumPad + / −  (FLOW 8 FX1)",
+        "echo_level": "에코 {pct}%",
+        "echo_failed": "에코 조절 실패: {error}",
     },
     "en": {
         "app_title": "audio-hotkeys — Snapshots",
@@ -152,6 +155,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "offline": "offline",
         "auto_switched_on": "Headset connected — switched to headset",
         "auto_switched_off": "Headset removed — back to the original devices",
+        "hotkeys_echo": "Mic echo amount: Ctrl+Alt+NumPad + / −  (FLOW 8 FX1)",
+        "echo_level": "Echo {pct}%",
+        "echo_failed": "Echo change failed: {error}",
     },
     "ja": {
         "app_title": "audio-hotkeys — スナップショット",
@@ -226,6 +232,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "offline": "未接続",
         "auto_switched_on": "ヘッドセット接続 — ヘッドセットへ切替",
         "auto_switched_off": "ヘッドセット切断 — 元の装置へ戻しました",
+        "hotkeys_echo": "マイクのエコー量: Ctrl+Alt+NumPad + / −  (FLOW 8 FX1)",
+        "echo_level": "エコー {pct}%",
+        "echo_failed": "エコー変更に失敗: {error}",
     },
     "zh": {
         "app_title": "audio-hotkeys — 快照",
@@ -300,6 +309,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "offline": "未连接",
         "auto_switched_on": "耳机已连接 — 已切换到耳机",
         "auto_switched_off": "耳机已拔出 — 已恢复原设备",
+        "hotkeys_echo": "麦克风回声量：Ctrl+Alt+NumPad + / −（FLOW 8 FX1）",
+        "echo_level": "回声 {pct}%",
+        "echo_failed": "回声调节失败：{error}",
     },
     "vi": {
         "app_title": "audio-hotkeys — Ảnh chụp",
@@ -374,6 +386,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "offline": "chưa kết nối",
         "auto_switched_on": "Đã kết nối tai nghe — chuyển sang tai nghe",
         "auto_switched_off": "Đã rút tai nghe — về thiết bị ban đầu",
+        "hotkeys_echo": "Độ vang mic: Ctrl+Alt+NumPad + / −  (FLOW 8 FX1)",
+        "echo_level": "Vang {pct}%",
+        "echo_failed": "Đổi độ vang thất bại: {error}",
     },
 }
 

@@ -45,6 +45,10 @@ ERROR_HOTKEY_ALREADY_REGISTERED = 1409
 VK_NUMPAD = {i: 0x60 + i for i in range(10)}
 VK_DECIMAL = 0x6E  # NumPad "." — needs NumLock, like the digits
 VK_OEM_PERIOD = 0xBE  # main-keyboard "." — works with NumLock off
+VK_ADD = 0x6B        # NumPad "+" — NumLock 무관
+VK_SUBTRACT = 0x6D   # NumPad "-"
+VK_OEM_PLUS = 0xBB   # main-keyboard "=" / "+"
+VK_OEM_MINUS = 0xBD  # main-keyboard "-"
 
 # Physical NumPad digit scan codes. NumLock/Shift never change these, and the
 # extended flag is what separates them from the main-keyboard nav cluster.
@@ -85,6 +89,9 @@ APPLY_ID_BASE = 1
 SAVE_ID_BASE = 11
 TOGGLE_IDS = (21, 22)
 SETTINGS_IDS = (23, 24)  # NumPad "." (synthetic fallback) + main-keyboard "."
+# Ctrl+Alt+NumPad "+"/"-" — FLOW 8 마이크 에코(FX1 센드) 한 단계 올림/내림. 메인 키보드 =/- 도 같은 동작.
+ECHO_IDS = {25: +1, 26: -1, 27: +1, 28: -1}
+ECHO_VKS = (VK_ADD, VK_SUBTRACT, VK_OEM_PLUS, VK_OEM_MINUS)
 
 
 def numlock_on() -> bool:
@@ -107,12 +114,15 @@ class HotkeyService:
         on_toggle: Callable[[], None] | None = None,
         on_settings: Callable[[], None] | None = None,
         on_error: Callable[[str], None] | None = None,
+        on_echo: Callable[[int], None] | None = None,
     ) -> None:
         self._on_slot = on_slot
         self._on_save = on_save
         self._on_toggle = on_toggle
         self._on_settings = on_settings
         self._on_error = on_error
+        self._on_echo = on_echo
+        self.echo_live = False
         self._thread: threading.Thread | None = None
         self._thread_id = 0
         self._ready = threading.Event()
@@ -173,6 +183,8 @@ class HotkeyService:
         # registration failed and the hook is dead too.
         if self._on_settings is not None and not self.settings_live and not self.save_hook_live:
             lines.append("설정 창 단축키(Ctrl+Alt+Shift+.) 등록에 실패했습니다.")
+        if self._on_echo is not None and not self.echo_live:
+            lines.append("에코 단축키(Ctrl+Alt+NumPad +/-) 등록에 실패했습니다.")
         if not numlock_on():
             lines.append("NumLock이 꺼져 있어 NumPad 단축키가 동작하지 않습니다.")
         return "\n".join(lines)
@@ -212,6 +224,12 @@ class HotkeyService:
             for hotkey_id, vk in zip(SETTINGS_IDS, (VK_DECIMAL, VK_OEM_PERIOD)):
                 if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT | MOD_SHIFT, vk):
                     self.settings_live = True
+
+        if self._on_echo is not None:
+            # NumPad +/- 는 NumLock과 무관하게 VK_ADD/VK_SUBTRACT로 온다. 메인 키보드 =/- 는 예비.
+            for hotkey_id, vk in zip(ECHO_IDS, ECHO_VKS):
+                if not self._register(hotkey_id, MOD_CONTROL | MOD_ALT, vk):
+                    self.echo_live = True
 
     def _shift_combo_down(self, vk: int) -> bool:
         """True when Ctrl+Alt+Shift is physically held for a NumPad keydown.
@@ -315,6 +333,10 @@ class HotkeyService:
             if hotkey_id in SETTINGS_IDS:
                 if self._on_settings is not None:
                     self._on_settings()
+                return
+            if hotkey_id in ECHO_IDS:
+                if self._on_echo is not None:
+                    self._on_echo(ECHO_IDS[hotkey_id])
                 return
             if hotkey_id >= SAVE_ID_BASE:
                 handler, slot = self._on_save, hotkey_id - SAVE_ID_BASE

@@ -21,6 +21,8 @@ from .win_shell import force_app_dark_mode
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
 PREF_POLL_MS = 3000  # 헤드셋 연결/해제 감시 주기
+ECHO_CHANNEL = "1"   # 에코 단축키가 만지는 FLOW 8 입력 채널(1번 마이크)
+ECHO_STEP = 8        # FX1 센드 한 단계(0~127 중 8 ≈ 6%)
 
 
 class DarkIcon(WinIcon):
@@ -86,7 +88,21 @@ class App:
             on_toggle=lambda: self.root.after(0, self.toggle_slot),
             on_settings=lambda: self.root.after(0, self.open_settings),
             on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
+            on_echo=lambda delta: self.root.after(0, lambda d=delta: self.nudge_echo(d)),
         )
+
+    def nudge_echo(self, delta: int) -> None:
+        """Ctrl+Alt+NumPad +/- — FLOW 8 1번 마이크의 FX1(에코) 센드를 한 단계 올리거나 내린다."""
+        try:
+            from flow8core import Flow8Controller
+
+            value = Flow8Controller().nudge(ECHO_CHANNEL, "send_fx1", delta * ECHO_STEP)
+        except Exception as exc:  # noqa: BLE001
+            toast(self.root, t("echo_failed", error=exc), level="error")
+            return
+        pct = round(value * 100 / 127)
+        show_profile_osd(self.root, "+" if delta > 0 else "-", t("echo_level", pct=pct), tag="FX1",
+                         level="positive" if delta > 0 else "normal", hold_ms=1200)
 
     def start(self) -> None:
         try:
