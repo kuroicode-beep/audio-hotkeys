@@ -2,7 +2,7 @@
 
 **[웹사이트](https://audio-hotkeys.svil.dev/)** · **[최신 버전 다운로드](https://github.com/kuroicode-beep/audio-hotkeys/releases/latest/download/audio-hotkeys.exe)** · [릴리스](https://github.com/kuroicode-beep/audio-hotkeys/releases)
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.10.0**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.10.1**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
