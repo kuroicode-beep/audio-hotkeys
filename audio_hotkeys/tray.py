@@ -84,7 +84,8 @@ class DarkTrayMenu:
         for key in config.SLOT_KEYS:
             snap = data["snapshots"][key]
             label = (snap.get("name") or "").strip() or f"Slot {key}"
-            text = f"[{key}]  {label}"
+            f8 = snap.get("flow8_snapshot")
+            text = f"[{key}]  {label}" + (f"  (F8:{f8})" if f8 else "")
             self._item(frame, text, self._wrap(lambda k=key: self.on_apply(k)), font)
 
         self._sep(frame)

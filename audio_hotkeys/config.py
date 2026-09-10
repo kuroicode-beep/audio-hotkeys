@@ -32,6 +32,7 @@ EMPTY_SNAPSHOT: dict[str, Any] = {
     "kakao_input_name": "",
     "kakao_output_volume": None,
     "kakao_input_volume": None,
+    "flow8_snapshot": None,   # FLOW 8 믹서 본체 스냅샷 번호(1~15), None이면 안 보냄
 }
 
 
@@ -75,6 +76,15 @@ def save_config(data: dict[str, Any]) -> None:
         json.dump(normalized, f, ensure_ascii=False, indent=2)
 
 
+# FLOW 8 스냅샷 번호는 1~15 정수만 인정, 그 외는 None
+def _flow8(value: Any) -> int | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if 1 <= n <= 15 else None
+
+
 def _normalize(data: dict[str, Any]) -> dict[str, Any]:
     base = default_config()
     if not isinstance(data, dict):
@@ -91,6 +101,7 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
                 snap[field] = str(raw.get(field) or "")
             for field in VOLUME_FIELDS:
                 snap[field] = _volume(raw.get(field))
+            snap["flow8_snapshot"] = _flow8(raw.get("flow8_snapshot"))
             base["snapshots"][key] = snap
     ui = data.get("ui")
     if isinstance(ui, dict):

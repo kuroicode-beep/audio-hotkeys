@@ -141,6 +141,7 @@ class SettingsWindow:
         self.font_id_var = tk.StringVar()
         self.font_size_var = tk.StringVar()
         self.lang_var = tk.StringVar()
+        self.flow8_var = tk.StringVar()  # FLOW 8 믹서 본체 스냅샷 번호("없음" 또는 1~15)
         self._font_preview_var = tk.StringVar()
 
         self.output_choices = audio.device_choices("output")
@@ -422,6 +423,11 @@ class SettingsWindow:
             parent, t("output_volume", self.lang), font, mono, t("set", self.lang), self.lang
         )
         self.in_vol = VolumeSlider(parent, t("input_volume", self.lang), font, mono, t("set", self.lang), self.lang)
+        self._combo(parent, t("flow8_field", self.lang), self.flow8_var, self._flow8_choices(), font)
+        tk.Label(
+            parent, text=t("flow8_hint", self.lang), bg=theme.SURFACE, fg=theme.TEXT_SUB, font=font,
+            anchor="w", justify="left", wraplength=theme.px(640),
+        ).pack(fill="x", pady=(0, 8))
 
     def _kakao_body(self, parent: tk.Misc, font: tuple) -> None:
         mono = self._mono()
@@ -584,6 +590,29 @@ class SettingsWindow:
         box.pack(side="left", fill="x", expand=True, ipady=12)
         self._darken_combobox_popdown(box)
 
+    # FLOW 8 스냅샷 선택지 — "없음" + 1~15 (flow8core 별칭이 있으면 이름 병기)
+    def _flow8_choices(self) -> list[str]:
+        return [t("flow8_none", self.lang)] + [self._flow8_display(n) for n in range(1, 16)]
+
+    def _flow8_display(self, n) -> str:
+        try:
+            num = int(n)
+        except (TypeError, ValueError):
+            return t("flow8_none", self.lang)
+        if not 1 <= num <= 15:
+            return t("flow8_none", self.lang)
+        try:
+            from flow8core.state import Aliases
+
+            alias = Aliases().snapshot_name(num)
+        except Exception:  # noqa: BLE001  코어가 없어도 설정 화면은 떠야 한다
+            alias = None
+        return f"{num} · {alias}" if alias else str(num)
+
+    def _flow8_parse(self, display: str) -> int | None:
+        head = (display or "").split("·")[0].strip()
+        return int(head) if head.isdigit() and 1 <= int(head) <= 15 else None
+
     def _darken_combobox_popdown(self, box: ttk.Combobox) -> None:
         def _on_open(_event: tk.Event | None = None) -> None:
             try:
@@ -638,6 +667,7 @@ class SettingsWindow:
 
         self.out_vol.set(snap.get("output_volume"))
         self.in_vol.set(snap.get("input_volume"))
+        self.flow8_var.set(self._flow8_display(snap.get("flow8_snapshot")))
         self.kakao_out_vol.set(snap.get("kakao_output_volume"))
         self.kakao_in_vol.set(snap.get("kakao_input_volume"))
 
@@ -677,6 +707,7 @@ class SettingsWindow:
             "kakao_input_name": k_in_name,
             "kakao_output_volume": self.kakao_out_vol.get(),
             "kakao_input_volume": self.kakao_in_vol.get(),
+            "flow8_snapshot": self._flow8_parse(self.flow8_var.get()),
         }
 
     def _save_slot(self) -> None:

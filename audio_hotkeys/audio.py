@@ -218,6 +218,17 @@ def apply_snapshot(snapshot: dict) -> ApplyResult:
     parts.extend(kakao_parts)
     warnings.extend(kakao_warnings)
 
+    # FLOW 8 믹서 본체 스냅샷 — 슬롯에 번호가 있을 때만 USB MIDI로 불러온다(실패해도 다른 항목은 유지)
+    f8 = snapshot.get("flow8_snapshot")
+    if f8:
+        try:
+            from flow8core import Flow8Controller
+
+            Flow8Controller().load_snapshot(int(f8))
+            parts.append(f"FLOW8: {int(f8)}")
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"FLOW 8 스냅샷 {f8} 불러오기 실패: {exc}")
+
     label = snapshot.get("name") or "Snapshot"
     if not parts:
         summary = f"{label}: (empty)" if not warnings else label

@@ -4,10 +4,12 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = ["comtypes.stream", "psutil"]
 hiddenimports += collect_submodules("comtypes")
 hiddenimports += collect_submodules("pycaw")
+# FLOW 8 믹서 연동(v1.7.0) — flow8core는 editable 설치라 경로를 직접 준다
+hiddenimports += collect_submodules("flow8core") + ["rtmidi", "rtmidi._rtmidi"]
 
 a = Analysis(
     ["launcher.py"],
-    pathex=["."],
+    pathex=[".", "C:/Projects/svil-flow8-mcp"],
     binaries=[],
     datas=[
         ("tools/svcl/svcl.exe", "tools/svcl"),

@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.7.0",
+        "2026-09-10",
+        "슬롯에 FLOW 8 믹서 본체 스냅샷 번호를 묶어 Ctrl+Alt+NumPad 한 번에 PC 장치와 믹서를 함께 전환. "
+        "설정 화면에 FLOW 8 스냅샷 선택 추가, 트레이·토스트에 표시. Shift 저장 때 FLOW 8 값은 유지.",
+    ),
     (
         "1.6.0",
         "2026-08-01",
