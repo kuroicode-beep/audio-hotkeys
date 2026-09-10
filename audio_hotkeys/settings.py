@@ -145,6 +145,7 @@ class SettingsWindow:
         self.pref_output_var = tk.StringVar()   # 헤드셋 우선 출력
         self.pref_input_var = tk.StringVar()    # 헤드셋 우선 입력
         self.pref_auto_var = tk.BooleanVar(value=False)
+        self.pref2_output_var = tk.StringVar()  # 2순위 우선 스피커(출력만)
         self._pref_saved: dict[str, str] = {}   # 미연결 상태에서 저장값을 잃지 않기 위한 원본
         self._font_preview_var = tk.StringVar()
 
@@ -435,6 +436,7 @@ class SettingsWindow:
         # 헤드셋 우선 장치 — 연결돼 있을 때만 위 장치 대신 쓴다
         self._combo(parent, t("field_pref_out", self.lang), self.pref_output_var, [n for n, _ in self.output_choices], font)
         self._combo(parent, t("field_pref_in", self.lang), self.pref_input_var, [n for n, _ in self.input_choices], font)
+        self._combo(parent, t("field_pref2_out", self.lang), self.pref2_output_var, [n for n, _ in self.output_choices], font)
         row = tk.Frame(parent, bg=theme.SURFACE)
         row.pack(fill="x", pady=4)
         tk.Checkbutton(
@@ -689,10 +691,12 @@ class SettingsWindow:
         self.flow8_var.set(self._flow8_display(snap.get("flow8_snapshot")))
         # 헤드셋 우선 장치는 안 꽂혀 있는 게 정상 상태다 — 경고 없이 "(미연결)"로만 표시하고 저장값은 보존
         self._pref_saved = {k: snap.get(k) or "" for k in
-                            ("pref_output_id", "pref_output_name", "pref_input_id", "pref_input_name")}
+                            ("pref_output_id", "pref_output_name", "pref_input_id", "pref_input_name",
+                             "pref2_output_id", "pref2_output_name")}
         for var, choices, flow, id_field, name_field in (
             (self.pref_output_var, self.output_choices, "output", "pref_output_id", "pref_output_name"),
             (self.pref_input_var, self.input_choices, "input", "pref_input_id", "pref_input_name"),
+            (self.pref2_output_var, self.output_choices, "output", "pref2_output_id", "pref2_output_name"),
         ):
             saved_id, saved_name = snap.get(id_field) or "", snap.get(name_field) or ""
             device_id, _ = audio.resolve_device(saved_id, saved_name, flow)
@@ -739,6 +743,7 @@ class SettingsWindow:
         k_in_id, k_in_name = self._pick(self.kakao_input_var, self._input_map)
         p_out_id, p_out_name = self._pick_keep(self.pref_output_var, self._output_map, "pref_output_id", "pref_output_name")
         p_in_id, p_in_name = self._pick_keep(self.pref_input_var, self._input_map, "pref_input_id", "pref_input_name")
+        p2_out_id, p2_out_name = self._pick_keep(self.pref2_output_var, self._output_map, "pref2_output_id", "pref2_output_name")
         return {
             "name": self.name_var.get().strip() or f"Slot {self.slot.get()}",
             "output_id": out_id,
@@ -759,6 +764,8 @@ class SettingsWindow:
             "pref_input_id": p_in_id,
             "pref_input_name": p_in_name,
             "pref_auto": bool(self.pref_auto_var.get()),
+            "pref2_output_id": p2_out_id,
+            "pref2_output_name": p2_out_name,
         }
 
     def _save_slot(self) -> None:

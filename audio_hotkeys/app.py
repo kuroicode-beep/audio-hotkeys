@@ -121,14 +121,14 @@ class App:
         data = config.load_config()
         for key in config.SLOT_KEYS:
             snap = data["snapshots"][key]
-            if snap.get("pref_auto") and audio.pref_present(snap) is not None:
+            if snap.get("pref_auto") and audio.presence_key(snap) is not None:
                 self._arm_auto(key, snap)
                 return
 
     def _arm_auto(self, slot: str, snap: dict) -> None:
         self._auto_slot = slot
         try:
-            self._auto_present = audio.pref_present(snap)
+            self._auto_present = audio.presence_key(snap)
         except Exception:  # noqa: BLE001
             self._auto_present = None
         if self._auto_job is None:
@@ -148,13 +148,19 @@ class App:
             self._disarm_auto()
             return
         try:
-            present = audio.pref_present(snap)
+            present = audio.presence_key(snap)
         except Exception:  # noqa: BLE001
             present = self._auto_present
         if present is not None and present != self._auto_present:
+            before = self._auto_present or (False, False)
             self._auto_present = present
             self.apply_slot(self._auto_slot)
-            toast(self.root, t("auto_switched_on" if present else "auto_switched_off"), level="positive")
+            # 무엇이 바뀌었는지 말로 알린다 — 헤드셋이 우선이라 헤드셋 변화가 있으면 그걸 먼저
+            if present[0] != before[0]:
+                key = "auto_switched_on" if present[0] else "auto_switched_off"
+            else:
+                key = "auto_spk_on" if present[1] else "auto_spk_off"
+            toast(self.root, t(key), level="positive")
         if self._auto_job is None:
             self._auto_job = self.root.after(PREF_POLL_MS, self._auto_tick)
 
@@ -183,7 +189,7 @@ class App:
             return
         self._remember(slot)
         # 자동 전환이 켜진 슬롯이면 감시 시작(기준 = 지금 연결 상태), 아니면 감시 해제
-        if snap.get("pref_auto") and audio.pref_present(snap) is not None:
+        if snap.get("pref_auto") and audio.presence_key(snap) is not None:
             self._arm_auto(slot, snap)
         else:
             self._disarm_auto()

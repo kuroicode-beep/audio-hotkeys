@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.10.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.10.0",
+        "2026-09-10",
+        "슬롯에 2순위 '우선 스피커(출력)'를 둘 수 있다. 헤드셋이 없고 그 스피커(블루투스 등)가 연결돼 있으면 "
+        "출력만 그쪽으로, 빠지면 원래 장치로. 자동 전환 감시가 헤드셋과 우선 스피커 둘 다 본다.",
+    ),
     (
         "1.9.0",
         "2026-09-10",

@@ -32,11 +32,47 @@ def _fake_devices(monkeypatch, outputs, inputs):
     monkeypatch.setattr(audio, "list_devices", lambda flow: list(outputs if flow == "output" else inputs))
 
 
+MIRACLE_OUT = audio.AudioDevice(id="{0.0.0}.{miracle}", name="헤드폰(miracle)", flow="output")
+
+
+def _slot0_with_speaker() -> dict:
+    snap = _slot0()
+    snap.update({"pref2_output_id": MIRACLE_OUT.id, "pref2_output_name": MIRACLE_OUT.name})
+    return snap
+
+
+# 2순위 스피커: 헤드셋 없고 스피커만 있으면 출력·카카오톡 출력만 바뀌고 입력은 그대로
+def test_speaker_tier_output_only(monkeypatch):
+    _fake_devices(monkeypatch, [FLOW_OUT, MIRACLE_OUT], [RODE_IN])
+    snap, tier = audio.effective_snapshot(_slot0_with_speaker())
+    assert tier == "speaker"
+    assert snap["output_id"] == MIRACLE_OUT.id and snap["kakao_output_id"] == MIRACLE_OUT.id
+    assert snap["input_id"] == RODE_IN.id and snap["kakao_input_id"] == ""
+    assert audio.presence_key(_slot0_with_speaker()) == (False, True)
+
+
+# 헤드셋과 스피커가 둘 다 있으면 헤드셋이 이긴다
+def test_headset_beats_speaker(monkeypatch):
+    _fake_devices(monkeypatch, [FLOW_OUT, MIRACLE_OUT, RAZER_OUT], [RODE_IN, RAZER_IN])
+    snap, tier = audio.effective_snapshot(_slot0_with_speaker())
+    assert tier == "headset" and snap["output_id"] == RAZER_OUT.id
+    assert audio.presence_key(_slot0_with_speaker()) == (True, True)
+
+
+# 둘 다 없으면 원본, presence_key는 (False, False); 아무것도 안 정한 슬롯은 None
+def test_speaker_tier_absent(monkeypatch):
+    _fake_devices(monkeypatch, [FLOW_OUT], [RODE_IN])
+    snap, tier = audio.effective_snapshot(_slot0_with_speaker())
+    assert tier == "" and snap["output_id"] == FLOW_OUT.id
+    assert audio.presence_key(_slot0_with_speaker()) == (False, False)
+    assert audio.presence_key(dict(config.EMPTY_SNAPSHOT)) is None
+
+
 # 헤드셋이 꽂혀 있으면 시스템·카카오톡 출력/입력이 전부 헤드셋으로 바뀐다
 def test_pref_present_overrides_all(monkeypatch):
     _fake_devices(monkeypatch, [FLOW_OUT, RAZER_OUT], [RODE_IN, RAZER_IN])
     snap, used = audio.effective_snapshot(_slot0())
-    assert used is True
+    assert used == "headset"
     assert snap["output_id"] == RAZER_OUT.id and snap["input_id"] == RAZER_IN.id
     assert snap["kakao_output_id"] == RAZER_OUT.id and snap["kakao_input_id"] == RAZER_IN.id
     assert snap["kakao_output_name"] == RAZER_OUT.name
@@ -47,7 +83,7 @@ def test_pref_absent_keeps_base(monkeypatch):
     _fake_devices(monkeypatch, [FLOW_OUT], [RODE_IN])
     base = _slot0()
     snap, used = audio.effective_snapshot(base)
-    assert used is False and snap is base
+    assert used == "" and snap is base
     assert audio.pref_present(base) is False
 
 
@@ -56,7 +92,7 @@ def test_pref_matches_by_name(monkeypatch):
     renamed = audio.AudioDevice(id="{0.0.0}.{new-id}", name=RAZER_OUT.name, flow="output")
     _fake_devices(monkeypatch, [FLOW_OUT, renamed], [RODE_IN])
     snap, used = audio.effective_snapshot(_slot0())
-    assert used is True and snap["output_id"] == RAZER_OUT.id  # 저장된 id를 넘기고 apply 단계에서 이름 재매칭
+    assert used == "headset" and snap["output_id"] == RAZER_OUT.id  # 저장된 id를 넘기고 apply 단계에서 이름 재매칭
 
 
 # 우선 장치를 안 정한 슬롯은 None(감시 대상 아님)
@@ -64,7 +100,7 @@ def test_pref_none_when_unset(monkeypatch):
     _fake_devices(monkeypatch, [FLOW_OUT], [RODE_IN])
     snap = dict(config.EMPTY_SNAPSHOT)
     assert audio.pref_present(snap) is None
-    assert audio.effective_snapshot(snap)[1] is False
+    assert audio.effective_snapshot(snap)[1] == ""
 
 
 # 설정 정규화: pref 필드가 살아남고 pref_auto는 bool
@@ -81,7 +117,8 @@ def test_i18n_key_parity():
     ko = keys["ko"]
     for lang, ks in keys.items():
         assert ks == ko, f"{lang}: {ks ^ ko}"
-    for k in ("field_pref_out", "field_pref_in", "pref_auto", "pref_hint", "offline", "auto_switched_on", "auto_switched_off"):
+    for k in ("field_pref_out", "field_pref_in", "pref_auto", "pref_hint", "offline", "auto_switched_on", "auto_switched_off",
+              "field_pref2_out", "auto_spk_on", "auto_spk_off"):
         assert k in ko
 
 

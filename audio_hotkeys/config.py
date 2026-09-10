@@ -14,8 +14,10 @@ SLOT_KEYS = [str(i) for i in range(10)]
 # *_name mirrors each *_id so a snapshot survives a device id change
 # (USB re-enumeration, driver reinstall). The id is tried first, the name
 # is the fallback match.
-ID_FIELDS = ("output_id", "input_id", "kakao_output_id", "kakao_input_id", "pref_output_id", "pref_input_id")
-NAME_FIELDS = ("output_name", "input_name", "kakao_output_name", "kakao_input_name", "pref_output_name", "pref_input_name")
+ID_FIELDS = ("output_id", "input_id", "kakao_output_id", "kakao_input_id",
+             "pref_output_id", "pref_input_id", "pref2_output_id")
+NAME_FIELDS = ("output_name", "input_name", "kakao_output_name", "kakao_input_name",
+               "pref_output_name", "pref_input_name", "pref2_output_name")
 VOLUME_FIELDS = ("output_volume", "input_volume", "kakao_output_volume", "kakao_input_volume")
 
 EMPTY_SNAPSHOT: dict[str, Any] = {
@@ -39,6 +41,9 @@ EMPTY_SNAPSHOT: dict[str, Any] = {
     "pref_input_id": "",
     "pref_input_name": "",
     "pref_auto": False,       # True면 연결/해제를 감시해 자동으로 다시 적용
+    # 2순위 우선 스피커(출력만) — 헤드셋이 없고 이 장치가 연결돼 있으면 출력만 이쪽으로(블루투스 스피커 등)
+    "pref2_output_id": "",
+    "pref2_output_name": "",
 }
 
 

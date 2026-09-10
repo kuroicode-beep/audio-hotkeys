@@ -183,26 +183,51 @@ def pref_present(snapshot: dict) -> bool | None:
     return bool(live)
 
 
-def effective_snapshot(snapshot: dict) -> tuple[dict, bool]:
-    """헤드셋 우선 장치가 연결돼 있으면 시스템·카카오톡 출력/입력을 그 장치로 바꾼 사본을 돌려준다.
+def pref2_present(snapshot: dict) -> bool | None:
+    """2순위 우선 스피커(출력만)가 지금 연결돼 있는지. 안 정했으면 None."""
+    out_id = snapshot.get("pref2_output_id") or ""
+    out_name = snapshot.get("pref2_output_name") or ""
+    if not (out_id or out_name):
+        return None
+    live, _ = resolve_device(out_id, out_name, "output")
+    return bool(live)
 
-    반환: (적용할 스냅샷, 우선 장치를 썼는지). 안 꽂혀 있으면 원본 그대로.
+
+def presence_key(snapshot: dict) -> tuple[bool, bool] | None:
+    """감시용 연결 상태 (헤드셋, 우선 스피커). 둘 다 안 정한 슬롯이면 None."""
+    a, b = pref_present(snapshot), pref2_present(snapshot)
+    if a is None and b is None:
+        return None
+    return bool(a), bool(b)
+
+
+def effective_snapshot(snapshot: dict) -> tuple[dict, str]:
+    """우선 장치가 연결돼 있으면 그 장치로 바꾼 사본을 돌려준다.
+
+    순서: 헤드셋(입·출력, 카카오톡 포함) > 우선 스피커(출력·카카오톡 출력만) > 슬롯 원래 장치.
+    반환: (적용할 스냅샷, 쓴 층 — "headset" | "speaker" | "").
     """
-    if not pref_present(snapshot):
-        return snapshot, False
-    snap = dict(snapshot)
-    for src_id, src_name, targets in (
-        ("pref_output_id", "pref_output_name",
-         (("output_id", "output_name"), ("kakao_output_id", "kakao_output_name"))),
-        ("pref_input_id", "pref_input_name",
-         (("input_id", "input_name"), ("kakao_input_id", "kakao_input_name"))),
-    ):
-        if not (snapshot.get(src_id) or snapshot.get(src_name)):
-            continue
-        for id_field, name_field in targets:
-            snap[id_field] = snapshot.get(src_id) or ""
-            snap[name_field] = snapshot.get(src_name) or ""
-    return snap, True
+    if pref_present(snapshot):
+        snap = dict(snapshot)
+        for src_id, src_name, targets in (
+            ("pref_output_id", "pref_output_name",
+             (("output_id", "output_name"), ("kakao_output_id", "kakao_output_name"))),
+            ("pref_input_id", "pref_input_name",
+             (("input_id", "input_name"), ("kakao_input_id", "kakao_input_name"))),
+        ):
+            if not (snapshot.get(src_id) or snapshot.get(src_name)):
+                continue
+            for id_field, name_field in targets:
+                snap[id_field] = snapshot.get(src_id) or ""
+                snap[name_field] = snapshot.get(src_name) or ""
+        return snap, "headset"
+    if pref2_present(snapshot):
+        snap = dict(snapshot)
+        for id_field, name_field in (("output_id", "output_name"), ("kakao_output_id", "kakao_output_name")):
+            snap[id_field] = snapshot.get("pref2_output_id") or ""
+            snap[name_field] = snapshot.get("pref2_output_name") or ""
+        return snap, "speaker"
+    return snapshot, ""
 
 
 def capture_system() -> dict:
@@ -230,9 +255,9 @@ def apply_snapshot(snapshot: dict) -> ApplyResult:
     warnings: list[str] = []
 
     # 헤드셋 우선 장치가 꽂혀 있으면 그쪽으로 — 아니면 슬롯에 적힌 장치 그대로
-    snapshot, used_pref = effective_snapshot(snapshot)
-    if used_pref:
-        parts.append("Headset")
+    snapshot, tier = effective_snapshot(snapshot)
+    if tier:
+        parts.append({"headset": "Headset", "speaker": "Speaker"}[tier])
 
     for flow, id_field, name_field, vol_field, tag in (
         ("output", "output_id", "output_name", "output_volume", "Out"),
