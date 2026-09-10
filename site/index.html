@@ -198,7 +198,7 @@
         <path d="M18 24h11l11-8v32l-11-8H18z" fill="#b3ddff"/>
       </svg>
       <b>audio-hotkeys</b>
-      <span class="ver">v1.6.0</span>
+      <span class="ver">v1.9.0</span>
     </div>
     <nav class="langs" aria-label="Language">
       <button type="button" data-lang="en" lang="en">English</button>
@@ -248,6 +248,8 @@
         <div class="card"><h3 data-i18n="f4_t"></h3><p data-i18n="f4_d"></p></div>
         <div class="card"><h3 data-i18n="f5_t"></h3><p data-i18n="f5_d"></p></div>
         <div class="card"><h3 data-i18n="f6_t"></h3><p data-i18n="f6_d"></p></div>
+        <div class="card"><h3 data-i18n="f7_t"></h3><p data-i18n="f7_d"></p></div>
+        <div class="card"><h3 data-i18n="f8_t"></h3><p data-i18n="f8_d"></p></div>
       </div>
     </div>
   </section>
@@ -273,6 +275,14 @@
             <tr>
               <td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>.</kbd></td>
               <td data-i18n="hk_toggle"></td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>.</kbd></td>
+              <td data-i18n="hk_settings"></td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>NumPad +</kbd> / <kbd>NumPad −</kbd></td>
+              <td data-i18n="hk_echo"></td>
             </tr>
           </tbody>
         </table>
@@ -358,6 +368,10 @@ const I18N = {
     f5_d: "Point KakaoTalk at a different device and volume than the rest of the system, all in the same snapshot.",
     f6_t: "Built for readability",
     f6_d: "High-contrast dark UI, eight Korean fonts, three text sizes, five languages, and a large on-screen readout on every switch.",
+    f7_t: "Mixer and headset follow along",
+    f7_d: "A slot can recall a Behringer FLOW 8 snapshot over USB MIDI at the same time, and name a headset as its priority device — used only while it is plugged in, with automatic switching when it comes and goes.",
+    f8_t: "Echo on two keys",
+    f8_d: "Ctrl+Alt+NumPad + / − raises or lowers the FLOW 8 mic reverb send one step at a time, with the current amount shown large on screen. No reaching for the mixer.",
     hotkeys_title: "Hotkeys",
     hotkeys_sub: "Fixed — no rebinding, nothing to configure.",
     th_key: "Key",
@@ -365,6 +379,8 @@ const I18N = {
     hk_apply: "Apply the snapshot in slot 0–9",
     hk_save: "Save the current audio state into slot 0–9",
     hk_toggle: "Go back to the previously applied slot",
+    hk_settings: "Open the settings window",
+    hk_echo: "FLOW 8 mic echo one step up / down",
     note_label: "Note",
     note_numlock: "The NumPad hotkeys need NumLock on — Windows sends different key codes when it is off. The app warns you at startup if it is. Ctrl+Alt+. also works from the main keyboard's period key, which is not affected by NumLock.",
     links_title: "Links",
@@ -404,6 +420,10 @@ const I18N = {
     f5_d: "카카오톡만 다른 장치·볼륨으로 보낼 수 있습니다. 같은 스냅샷 안에서 함께 관리됩니다.",
     f6_t: "읽기 편하게",
     f6_d: "고대비 다크 UI, 한글 글꼴 8종, 글자 크기 3단계, 5개 언어. 전환할 때마다 큰 글씨로 프로필 이름을 띄웁니다.",
+    f7_t: "믹서와 헤드셋이 따라옵니다",
+    f7_d: "슬롯이 Behringer FLOW 8 본체 스냅샷을 USB MIDI로 함께 불러오고, 헤드셋을 우선 장치로 둘 수 있습니다. 꽂혀 있을 때만 쓰고, 꽂고 빼면 자동으로 전환됩니다.",
+    f8_t: "에코는 키 두 개로",
+    f8_d: "Ctrl+Alt+NumPad + / − 로 FLOW 8 마이크 리버브 센드를 한 단계씩 올리고 내립니다. 현재 값이 화면에 크게 뜹니다. 믹서에 손 뻗을 일이 없습니다.",
     hotkeys_title: "단축키",
     hotkeys_sub: "고정입니다 — 재설정할 것도, 설정할 것도 없습니다.",
     th_key: "단축키",
@@ -411,6 +431,8 @@ const I18N = {
     hk_apply: "슬롯 0–9의 스냅샷 적용",
     hk_save: "현재 오디오 상태를 슬롯 0–9에 저장",
     hk_toggle: "직전에 적용한 슬롯으로 되돌아가기",
+    hk_settings: "설정 창 열기",
+    hk_echo: "FLOW 8 마이크 에코 한 단계 올림 / 내림",
     note_label: "참고",
     note_numlock: "NumPad 단축키는 NumLock이 켜져 있어야 합니다 — 꺼져 있으면 Windows가 다른 키코드를 보냅니다. 꺼져 있으면 앱이 시작할 때 알려 줍니다. Ctrl+Alt+.은 메인 키보드의 마침표로도 동작하며, 이쪽은 NumLock과 무관합니다.",
     links_title: "링크",
@@ -450,6 +472,10 @@ const I18N = {
     f5_d: "カカオトークだけを別の機器・音量に向けられます。同じスナップショット内でまとめて管理します。",
     f6_t: "読みやすさ重視",
     f6_d: "高コントラストのダーク UI、韓国語フォント8種、文字サイズ3段階、5言語対応。切り替えるたびに大きな文字でプロファイル名を表示します。",
+    f7_t: "ミキサーとヘッドセットも一緒に",
+    f7_d: "スロットが Behringer FLOW 8 本体のスナップショットを USB MIDI で同時に呼び出し、ヘッドセットを優先機器に指定できます。接続中だけ使い、抜き差しで自動切替します。",
+    f8_t: "エコーはキー2つで",
+    f8_d: "Ctrl+Alt+NumPad + / − で FLOW 8 マイクのリバーブ送りを一段ずつ上下します。現在値を大きく表示。ミキサーに手を伸ばす必要はありません。",
     hotkeys_title: "ショートカット",
     hotkeys_sub: "固定です — 変更する必要も、設定する必要もありません。",
     th_key: "キー",
@@ -457,6 +483,8 @@ const I18N = {
     hk_apply: "スロット 0–9 のスナップショットを適用",
     hk_save: "現在のオーディオ状態をスロット 0–9 に保存",
     hk_toggle: "直前に適用したスロットに戻る",
+    hk_settings: "設定ウィンドウを開く",
+    hk_echo: "FLOW 8 マイクのエコーを一段 上げ / 下げ",
     note_label: "注意",
     note_numlock: "NumPad のショートカットは NumLock がオンである必要があります — オフだと Windows が別のキーコードを送ります。オフの場合はアプリが起動時に知らせます。Ctrl+Alt+. はメインキーボードのピリオドでも動作し、こちらは NumLock の影響を受けません。",
     links_title: "リンク",
@@ -496,6 +524,10 @@ const I18N = {
     f5_d: "可以让 KakaoTalk 使用与系统不同的设备和音量，在同一个快照里一起管理。",
     f6_t: "为易读而设计",
     f6_d: "高对比度深色界面、8 种韩文字体、3 档字号、5 种语言，每次切换都会用大字显示配置名称。",
+    f7_t: "调音台和耳机一起跟随",
+    f7_d: "插槽可同时通过 USB MIDI 调出 Behringer FLOW 8 本机快照，并把耳机设为优先设备：只在插上时使用，插拔时自动切换。",
+    f8_t: "两个键控制回声",
+    f8_d: "Ctrl+Alt+NumPad + / − 逐级增减 FLOW 8 麦克风的混响发送量，当前值在屏幕上大字显示。不必伸手去碰调音台。",
     hotkeys_title: "快捷键",
     hotkeys_sub: "固定的 — 无需重新绑定，也无需配置。",
     th_key: "按键",
@@ -503,6 +535,8 @@ const I18N = {
     hk_apply: "应用插槽 0–9 的快照",
     hk_save: "把当前音频状态保存到插槽 0–9",
     hk_toggle: "返回上一个应用过的插槽",
+    hk_settings: "打开设置窗口",
+    hk_echo: "FLOW 8 麦克风回声 升一级 / 降一级",
     note_label: "注意",
     note_numlock: "NumPad 快捷键需要开启 NumLock — 关闭时 Windows 会发送不同的键码。若已关闭，应用会在启动时提示。Ctrl+Alt+. 也可以用主键盘上的句点键，不受 NumLock 影响。",
     links_title: "链接",
@@ -542,6 +576,10 @@ const I18N = {
     f5_d: "Cho KakaoTalk dùng thiết bị và âm lượng khác với phần còn lại của hệ thống, quản lý chung trong một ảnh chụp.",
     f6_t: "Thiết kế để dễ đọc",
     f6_d: "Giao diện tối tương phản cao, 8 phông chữ Hàn, 3 cỡ chữ, 5 ngôn ngữ, và hiển thị tên hồ sơ cỡ lớn mỗi lần chuyển.",
+    f7_t: "Mixer và tai nghe đi cùng",
+    f7_d: "Một khe có thể gọi snapshot của Behringer FLOW 8 qua USB MIDI cùng lúc, và đặt tai nghe làm thiết bị ưu tiên: chỉ dùng khi đang cắm, tự chuyển khi cắm hoặc rút.",
+    f8_t: "Vang bằng hai phím",
+    f8_d: "Ctrl+Alt+NumPad + / − tăng hoặc giảm mức vang của mic FLOW 8 từng nấc, giá trị hiện tại hiện to trên màn hình. Không cần với tay tới mixer.",
     hotkeys_title: "Phím tắt",
     hotkeys_sub: "Cố định — không cần gán lại, không cần cấu hình.",
     th_key: "Phím",
@@ -549,6 +587,8 @@ const I18N = {
     hk_apply: "Áp dụng ảnh chụp ở khe 0–9",
     hk_save: "Lưu trạng thái âm thanh hiện tại vào khe 0–9",
     hk_toggle: "Quay lại khe đã áp dụng trước đó",
+    hk_settings: "Mở cửa sổ cài đặt",
+    hk_echo: "Vang mic FLOW 8 tăng / giảm một nấc",
     note_label: "Lưu ý",
     note_numlock: "Các phím tắt NumPad cần bật NumLock — khi tắt, Windows gửi mã phím khác. Ứng dụng sẽ cảnh báo lúc khởi động nếu nó đang tắt. Ctrl+Alt+. cũng chạy được bằng phím chấm trên bàn phím chính, không phụ thuộc NumLock.",
     links_title: "Liên kết",

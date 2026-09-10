@@ -2,7 +2,7 @@
 
 **[웹사이트](https://audio-hotkeys.svil.dev/)** · **[최신 버전 다운로드](https://github.com/kuroicode-beep/audio-hotkeys/releases/latest/download/audio-hotkeys.exe)** · [릴리스](https://github.com/kuroicode-beep/audio-hotkeys/releases)
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.6.0**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.9.0**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
@@ -11,6 +11,8 @@ Each slot can store:
 - system output / input volume
 - **KakaoTalk-only** output / input device
 - **KakaoTalk-only** output / input volume (Windows app mixer has one volume; output volume is preferred)
+- **FLOW 8 mixer snapshot** number (1–15), recalled over USB MIDI via [svil-flow8-mcp](https://github.com/kuroicode-beep/svil-flow8-mcp) (v1.7.0)
+- **Headset priority** output / input — used only while that device is connected, with optional auto-switch when it is plugged in or removed (v1.8.0)
 
 KakaoTalk per-app routing uses bundled [SoundVolumeCommandLine (svcl)](https://www.nirsoft.net/utils/sound_volume_command_line.html). KakaoTalk must be running when the snapshot is applied.
 
@@ -59,6 +61,8 @@ Output: `dist\audio-hotkeys.exe`
 | `Ctrl+Alt+NumPad 0` … `9` | Apply snapshot slot 0–9 |
 | `Ctrl+Alt+Shift+NumPad 0` … `9` | **Save** the live audio state into slot 0–9 |
 | `Ctrl+Alt+.` | **Toggle** back to the previously applied slot |
+| `Ctrl+Alt+Shift+.` | Open the settings window |
+| `Ctrl+Alt+NumPad +` / `NumPad -` | FLOW 8 mic echo (FX1 send) one step up / down (v1.9.0) |
 | Tray left-click | Open settings |
 | Tray right-click | Dark menu (apply slots / window-switch overlay / settings / quit) |
 
