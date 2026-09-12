@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-hiddenimports = ["comtypes.stream", "psutil"]
+hiddenimports = ["comtypes.stream", "psutil", "sounddevice", "_cffi_backend"]  # sounddevice: 방송 점검 마이크 측정(v1.11.0)
 hiddenimports += collect_submodules("comtypes")
 hiddenimports += collect_submodules("pycaw")
 # FLOW 8 믹서 연동(v1.7.0) — flow8core는 editable 설치라 경로를 직접 준다
@@ -14,7 +14,7 @@ a = Analysis(
     datas=[
         ("tools/svcl/svcl.exe", "tools/svcl"),
         ("assets/fonts", "assets/fonts"),
-    ],
+    ] + collect_data_files("sounddevice"),   # PortAudio DLL(_sounddevice_data)
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

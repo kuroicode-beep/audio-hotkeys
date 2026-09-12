@@ -2,7 +2,7 @@
 
 **[웹사이트](https://audio-hotkeys.svil.dev/)** · **[최신 버전 다운로드](https://github.com/kuroicode-beep/audio-hotkeys/releases/latest/download/audio-hotkeys.exe)** · [릴리스](https://github.com/kuroicode-beep/audio-hotkeys/releases)
 
-Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.10.1**
+Windows tray app for **Ctrl+Alt+NumPad 0–9** audio snapshots. Current version: **v1.11.0**
 (the version is shown in the settings header; **업데이트 히스토리** there lists every release).
 
 Each slot can store:
@@ -60,7 +60,7 @@ Output: `dist\audio-hotkeys.exe`
 |--------|--------|
 | `Ctrl+Alt+NumPad 0` … `9` | Apply snapshot slot 0–9 |
 | `Ctrl+Alt+Shift+NumPad 0` … `9` | **Save** the live audio state into slot 0–9 |
-| `Ctrl+Alt+.` | **Toggle** back to the previously applied slot |
+| `Ctrl+Alt+.` | **Pre-broadcast check** — NumLock, broadcast slot, FLOW 8 port, 2-second mic signal test (v1.11.0; replaces the previous-slot toggle) |
 | `Ctrl+Alt+Shift+.` | Open the settings window |
 | `Ctrl+Alt+NumPad +` / `NumPad -` | FLOW 8 mic echo (FX1 send) one step up / down (v1.9.0) |
 | Tray left-click | Open settings |

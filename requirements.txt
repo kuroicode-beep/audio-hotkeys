@@ -5,3 +5,4 @@ Pillow>=10.0.0
 psutil>=5.9.0
 python-rtmidi>=1.5
 -e C:/Projects/svil-flow8-mcp
+sounddevice>=0.5

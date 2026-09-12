@@ -121,6 +121,16 @@ def test_config_normalizes_pref_fields():
     assert data["snapshots"]["1"]["pref_auto"] is False
 
 
+# 방송 점검 판정: 피크 임계 위=ok, 아래=silent, 장치 못 열면 none
+def test_precheck_classify():
+    from audio_hotkeys import precheck
+    assert precheck.classify(None) == "none"
+    assert precheck.classify(0.0) == "silent"
+    assert precheck.classify(precheck.MIC_THRESHOLD) == "ok"
+    assert precheck.classify(0.5) == "ok"
+    assert precheck.dbfs(0.5) == "-6 dBFS" and precheck.dbfs(0.0) == "-inf dBFS"
+
+
 # 5개 언어가 같은 키 집합을 가진다
 def test_i18n_key_parity():
     keys = {lang: set(table) for lang, table in i18n.STRINGS.items()}

@@ -2,10 +2,16 @@
 """Single source of truth for the app version and its release notes."""
 from __future__ import annotations
 
-APP_VERSION = "1.10.1"
+APP_VERSION = "1.11.0"
 
 # (버전, 날짜, 요약) — 최신순
 VERSION_HISTORY: list[tuple[str, str, str]] = [
+    (
+        "1.11.0",
+        "2026-09-12",
+        "Ctrl+Alt+. 이 '방송 직전 점검'이 됐다 — NumLock 켜기, 이름에 '방송'이 든 슬롯 적용, FLOW 8 포트 확인, "
+        "마이크 신호 2초 측정 후 결과를 큰 글씨로. (직전 슬롯 토글은 제거.) NumLock이 꺼지면 5초 안에 경고 알림.",
+    ),
     (
         "1.10.1",
         "2026-09-11",

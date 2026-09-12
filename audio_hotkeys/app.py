@@ -10,7 +10,9 @@ from typing import Callable
 import pystray
 from pystray._win32 import Icon as WinIcon
 
-from . import audio, config, kakao, theme
+import threading
+
+from . import audio, config, kakao, precheck, theme
 from .hotkeys import HotkeyService
 from .i18n import t
 from .settings import open_settings
@@ -23,6 +25,8 @@ WM_RBUTTONUP = 0x0205
 PREF_POLL_MS = 3000  # 헤드셋 연결/해제 감시 주기
 ECHO_CHANNEL = "1"   # 에코 단축키가 만지는 FLOW 8 입력 채널(1번 마이크)
 ECHO_STEP = 8        # FX1 센드 한 단계(0~127 중 8 ≈ 6%)
+NUMLOCK_POLL_MS = 5000  # NumLock 꺼짐 감시 주기 — 꺼지면 NumPad 단축키가 전부 안 먹는다
+BROADCAST_KEYWORD = "방송"  # 점검 단축키가 고르는 슬롯 이름 키워드
 
 
 class DarkIcon(WinIcon):
@@ -87,7 +91,7 @@ class App:
         self.hotkeys = HotkeyService(
             on_slot=lambda slot: self.root.after(0, lambda s=slot: self.apply_slot(s)),
             on_save=lambda slot: self.root.after(0, lambda s=slot: self.save_slot(s)),
-            on_toggle=lambda: self.root.after(0, self.toggle_slot),
+            on_toggle=lambda: self.root.after(0, self.precheck),   # v1.11.0: Ctrl+Alt+. = 방송 직전 점검
             on_settings=lambda: self.root.after(0, self.open_settings),
             on_error=lambda text: self.root.after(0, lambda x=text: toast(self.root, x, level="warning")),
             on_echo=lambda delta: self.root.after(0, lambda d=delta: self.nudge_echo(d)),
@@ -115,7 +119,52 @@ class App:
         self.icon.run_detached()
         self.root.after(400, self._startup_toast)
         self.root.after(1500, self._arm_auto_from_config)
+        self._numlock_last = precheck.numlock_on()
+        self.root.after(NUMLOCK_POLL_MS, self._numlock_tick)
         self.root.mainloop()
+
+    # ── NumLock 감시 — 켜져 있다가 꺼지면 한 번 알린다 ──
+    def _numlock_tick(self) -> None:
+        now = precheck.numlock_on()
+        if self._numlock_last and not now:
+            toast(self.root, t("numlock_off_warn"), level="warning", ms=6000)
+        self._numlock_last = now
+        self.root.after(NUMLOCK_POLL_MS, self._numlock_tick)
+
+    # ── 방송 직전 점검 (Ctrl+Alt+.) ──
+    def precheck(self) -> None:
+        """NumLock → 방송 슬롯 적용 → FLOW 8 포트 → 마이크 신호 2초 측정 → 결과를 큰 글씨로."""
+        notes: list[str] = []
+        if precheck.ensure_numlock():
+            notes.append(t("precheck_numlock_fixed"))
+        data = config.load_config()
+        snaps = data["snapshots"]
+        last = self._last_slot
+        if last is None or BROADCAST_KEYWORD not in (snaps.get(last, {}).get("name") or ""):
+            target = next((k for k in config.SLOT_KEYS if BROADCAST_KEYWORD in (snaps[k].get("name") or "")), None)
+            if target is not None:
+                self.apply_slot(target)
+                last = target
+        slot_name = (snaps.get(last or "", {}).get("name") or "").strip() or "-"
+        port_ok, port_msg = precheck.flow8_port()
+        notes.append(t("precheck_port_ok") if port_ok else t("precheck_port_fail", error=port_msg))
+        show_profile_osd(self.root, ".", t("precheck_speak"), tag=slot_name, hold_ms=int(precheck.MEASURE_SECONDS * 1000) + 300)
+
+        def _measure() -> None:
+            peak = precheck.measure_input_peak()
+            self.root.after(0, lambda: self._precheck_done(peak, port_ok, slot_name, notes))
+
+        threading.Thread(target=_measure, name="precheck-mic", daemon=True).start()
+
+    def _precheck_done(self, peak: float | None, port_ok: bool, slot_name: str, notes: list[str]) -> None:
+        kind = precheck.classify(peak)
+        mic_line = {"ok": t("precheck_mic_ok", level=precheck.dbfs(peak)),
+                    "silent": t("precheck_mic_silent", level=precheck.dbfs(peak)),
+                    "none": t("precheck_mic_none")}[kind]
+        ok = kind == "ok" and port_ok
+        show_profile_osd(self.root, ".", t("precheck_ok") if ok else t("precheck_fail"),
+                         tag=slot_name, level="positive" if ok else "error", hold_ms=3500)
+        toast(self.root, "\n".join([mic_line, *notes]), level="positive" if ok else "warning", ms=7000)
 
     # ── 헤드셋 자동 전환 ──
     def _arm_auto_from_config(self) -> None:
